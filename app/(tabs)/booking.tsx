@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useRouter } from "expo-router";
-import { supabase } from '../../lib/supabase/index'; 
+import { supabase } from '../../lib/supabase/index';
 
 interface Appointment {
   id: string;
@@ -18,46 +18,51 @@ export default function BookingScreen() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const router = useRouter();
 
+  // 1. SECURE ROUTE AUTHENTICATION HANDSHAKE
   useEffect(() => {
+    let isMounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
       if (!session) {
-        // 🔒 Secure Guard: Boot unauthenticated users back to the entry portal page
-        router.replace("/");
+        // 🔒 Secure Guard: Fallback to the entry login panel
+        router.replace("/(tabs)" as any);
       } else {
         setCheckingAuth(false);
+        fetchAvailableOpenings(isMounted);
       }
     });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  if (checkingAuth) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
-    );
-  }
-
-  async function fetchAllOpenings() {
+  // 2. SECURE DATA FETCH ROUTINE (NAME ALIGNED)
+  async function fetchAvailableOpenings(isMounted: boolean = true) {
     setLoading(true);
     const { data, error } = await supabase
       .from('appointments')
       .select('id, session_date, session_time, is_booked, user_id')
       .order('session_time', { ascending: true });
 
+    if (!isMounted) return;
+
     if (error) {
       Alert.alert('Database Error', 'Could not read available calendar openings.');
     } else if (data) {
-      setAllSlots(data);
+      setAllSlots(data as Appointment[]);
       if (selectedDate) {
-        setFilteredSlots(data.filter((slot) => slot.session_date === selectedDate && !slot.is_booked));
+        setFilteredSlots(
+          (data as Appointment[]).filter((slot) => slot.session_date === selectedDate && !slot.is_booked)
+        );
       }
     }
     setLoading(false);
   }
-
 
   const handleSelectDay = (dateString: string) => {
     setSelectedDate(dateString);
@@ -72,27 +77,26 @@ export default function BookingScreen() {
         marked[slot.session_date] = { marked: true, dotColor: '#007AFF' };
       }
     });
-
     if (selectedDate) {
       marked[selectedDate] = { ...marked[selectedDate], selected: true, selectedColor: '#007AFF' };
     }
     return marked;
   };
 
-  // UNIQUE DISPATCH: Securely links user_id on reservation click
+  // 3. BOOKING OPERATION HANDLER
   async function bookSession(slotId: string, date: string, time: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.');
-
+    
     setSubmitting(true);
     const { error } = await supabase
       .from('appointments')
       .update({ 
         is_booked: true, 
-        client_email: user.email,
-        user_id: user.id // SECURE LINKING: Saves their unique account ID
+        client_email: user.email, 
+        user_id: user.id 
       })
-      .eq('id', slotId.trim()); 
+      .eq('id', slotId.trim());
 
     if (error) {
       Alert.alert('Booking Failed', 'This session might have just been reserved by someone else.');
@@ -102,20 +106,19 @@ export default function BookingScreen() {
       setFilteredSlots((prev) => prev.filter((slot) => slot.id !== slotId));
     }
     setSubmitting(false);
-    fetchAllOpenings(); 
+    fetchAvailableOpenings();
   }
 
-  // SIGN OUT CONTROLLER
   async function handleSignOut() {
     await supabase.auth.signOut();
-    router.replace("/" as any);
+    router.replace("/(tabs)" as any);
   }
 
-  if (loading) {
+  if (checkingAuth || loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading calendar views...</Text>
+        <Text style={styles.loadingText}>Loading booking engine views...</Text>
       </View>
     );
   }
@@ -129,9 +132,17 @@ export default function BookingScreen() {
         </TouchableOpacity>
       </View>
       <Text style={styles.subHeader}>Select a highlighted date below to view available choices.</Text>
-
+      
       <View style={styles.calendarWrapper}>
-        <Calendar onDayPress={(day) => handleSelectDay(day.dateString)} markedDates={getMarkedDates()} theme={{ todayTextColor: '#007AFF', selectedDayBackgroundColor: '#007AFF', arrowColor: '#007AFF' }} />
+        <Calendar 
+          onDayPress={(day) => handleSelectDay(day.dateString)} 
+          markedDates={getMarkedDates()} 
+          theme={{ 
+            todayTextColor: '#007AFF', 
+            selectedDayBackgroundColor: '#007AFF', 
+            arrowColor: '#007AFF' 
+          }} 
+        />
       </View>
 
       {selectedDate ? (
@@ -140,17 +151,25 @@ export default function BookingScreen() {
           {filteredSlots.length === 0 ? (
             <Text style={styles.noSlotsText}>No sessions listed on this specific day.</Text>
           ) : (
-            <FlatList data={filteredSlots} keyExtractor={(item) => item.id} renderItem={({ item }) => (
-              <View style={styles.slotCard}>
-                <View>
-                  <Text style={styles.dateText}>{item.session_date}</Text>
-                  <Text style={styles.timeText}>{item.session_time}</Text>
+            <FlatList 
+              data={filteredSlots} 
+              keyExtractor={(item) => item.id} 
+              renderItem={({ item }) => (
+                <View style={styles.slotCard}>
+                  <View>
+                    <Text style={styles.dateText}>{item.session_date}</Text>
+                    <Text style={styles.timeText}>{item.session_time}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.bookButton} 
+                    disabled={submitting} 
+                    onPress={() => bookSession(item.id, item.session_date, item.session_time)}
+                  >
+                    <Text style={styles.bookButtonText}>Reserve</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.bookButton} disabled={submitting} onPress={() => bookSession(item.id, item.session_date, item.session_time)}>
-                  <Text style={styles.bookButtonText}>Reserve</Text>
-                </TouchableOpacity>
-              </View>
-            )} />
+              )} 
+            />
           )}
         </View>
       ) : (
