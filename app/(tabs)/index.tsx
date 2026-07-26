@@ -67,6 +67,43 @@ export default function HomeScreen() {
   if (error) Alert.alert("Login Failed", error.message);
 }
 
+// 1. WATCH THE AUTHENTICATION STATE SECURELY WITHOUT LOOPS
+useEffect(() => {
+  let isMounted = true;
+
+  // Fetch session once on initial load
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!isMounted) return;
+    setSession(session);
+    if (session?.user?.email) {
+      fetchMyBookingHistory(session.user.email);
+    }
+  });
+
+  // Listen for active auth state modifications
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (!isMounted) return;
+    
+    // 💡 Industry Standard: Only update state if the session actually changed
+    setSession(session);
+
+    if (session?.user?.email) {
+      // Only fetch history on specific sign-in events to kill loop cycles
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        fetchMyBookingHistory(session.user.email);
+      }
+    } else {
+      setMyBookings([]);
+    }
+  });
+
+  return () => {
+    isMounted = false;
+    subscription.unsubscribe();
+  };
+}, []); // 👈 Ensure this dependency array stays completely empty!
+
+
 async function handleSignUp() {
   if (!email || !password) return Alert.alert("Error", "Please fill in all input fields.");
   if (password.length < 8) return Alert.alert("Security", "Password must be at least 8 characters.");
