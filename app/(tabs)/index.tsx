@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { supabase } from "../../lib/supabase/index"; // Double check your relative path matches
+import { supabase } from "../../lib/supabase/index"; 
 import { Session } from "@supabase/supabase-js";
 
 interface UserBookingHistory {
@@ -13,7 +13,7 @@ interface UserBookingHistory {
 export default function HomeScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const [authView, setAuthView] = useState<"login" | "signup" | "forgot">("login");
-  const [initializing, setInitializing] = useState(true); // Prevents flash of login screen
+  const [initializing, setInitializing] = useState(true);
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,24 +22,34 @@ export default function HomeScreen() {
   const [myBookings, setMyBookings] = useState<UserBookingHistory[]>([]);
   const router = useRouter();
 
-  // 1. ACTIVE AUTH SESSION LISTENER
+  // 1. ACTIVE AUTH SESSION LISTENER (LOOP PROOF)
   useEffect(() => {
+    let isMounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
       setSession(session);
       setInitializing(false);
       if (session?.user?.email) fetchMyBookingHistory(session.user.email);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
       setSession(session);
+      
       if (session?.user?.email) {
-        fetchMyBookingHistory(session.user.email);
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          fetchMyBookingHistory(session.user.email);
+        }
       } else {
         setMyBookings([]);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function fetchMyBookingHistory(userEmail: string) {
@@ -56,86 +66,46 @@ export default function HomeScreen() {
     setFetchingHistory(false);
   }
 
- async function handleSignIn() {
-  if (!email || !password) return Alert.alert("Error", "Please fill in all input fields.");
-  setLoading(true);
-  const { error } = await supabase.auth.signInWithPassword({
-    email: email.trim().toLowerCase(),
-    password: password.trim(),
-  });
-  setLoading(false); // 🟢 Ensure this is false
-  if (error) Alert.alert("Login Failed", error.message);
-}
+  // 2. OPERATION HANDLERS
+  async function handleSignIn() {
+    if (!email || !password) return Alert.alert("Error", "Please fill in all input fields.");
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
+    });
+    setLoading(false);
+    if (error) Alert.alert("Login Failed", error.message);
+  }
 
-// 1. WATCH THE AUTHENTICATION STATE SECURELY WITHOUT LOOPS
-useEffect(() => {
-  let isMounted = true;
+  async function handleSignUp() {
+    if (!email || !password) return Alert.alert("Error", "Please fill in all input fields.");
+    if (password.length < 8) return Alert.alert("Security", "Password must be at least 8 characters.");
 
-  // Fetch session once on initial load
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (!isMounted) return;
-    setSession(session);
-    if (session?.user?.email) {
-      fetchMyBookingHistory(session.user.email);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return Alert.alert("Format Error", "Please provide a valid email address layout.");
     }
-  });
 
-  // Listen for active auth state modifications
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if (!isMounted) return;
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
+    });
+    setLoading(false);
     
-    // 💡 Industry Standard: Only update state if the session actually changed
-    setSession(session);
-
-    if (session?.user?.email) {
-      // Only fetch history on specific sign-in events to kill loop cycles
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        fetchMyBookingHistory(session.user.email);
-      }
+    if (error) {
+      Alert.alert("Sign Up Failed", error.message);
     } else {
-      setMyBookings([]);
+      Alert.alert("Success!", "Account registered successfully!");
+      setAuthView("login");
     }
-  });
-
-  return () => {
-    isMounted = false;
-    subscription.unsubscribe();
-  };
-}, []); // 👈 Ensure this dependency array stays completely empty!
-
-
-async function handleSignUp() {
-  if (!email || !password) return Alert.alert("Error", "Please fill in all input fields.");
-  if (password.length < 8) return Alert.alert("Security", "Password must be at least 8 characters.");
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email.trim())) {
-    return Alert.alert("Format Error", "Please provide a valid, structured email address layout.");
   }
-
-  setLoading(true);
-  const { error } = await supabase.auth.signUp({
-    email: email.trim().toLowerCase(),
-    password: password.trim(),
-    options: { emailRedirectTo: "https://steady-paletas-0ac2df.netlify.app" }
-  });
-  
-  setLoading(false); // 🟢 FIXED: Changed from true to false
-  
-  if (error) {
-    Alert.alert("Sign Up Failed", error.message);
-  } else {
-    Alert.alert("Success!", "Account registered successfully!");
-    setAuthView("login");
-  }
-}
 
   async function handleForgotPassword() {
     if (!email) return Alert.alert("Error", "Please type your email address first.");
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-      redirectTo: "https://steady-paletas-0ac2df.netlify.app",
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
     setLoading(false);
     if (error) {
       Alert.alert("Error", error.message);
@@ -149,7 +119,6 @@ async function handleSignUp() {
     await supabase.auth.signOut();
   }
 
-  // 3. RENDER LOADING BLOCK WHILE VERIFYING AUTH STATUS
   if (initializing) {
     return (
       <View style={styles.container}>
@@ -158,9 +127,7 @@ async function handleSignUp() {
     );
   }
 
-  // ==================== RENDERING COMPONENT LAYOUTS ==================== //
-
-  // CONDITIONAL RULE A: USER IS AUTHENTICATED -> SHOW LOGGED-IN HOME DASHBOARD
+  // CONDITIONAL VIEW A: LOGGED-IN HOME DASHBOARD
   if (session && session.user) {
     return (
       <ScrollView contentContainerStyle={styles.centerContainer}>
@@ -168,7 +135,8 @@ async function handleSignUp() {
           <Text style={styles.welcomeTitle}>Welcome Back!</Text>
           <Text style={styles.userBadge}>{session.user.email}</Text>
           
-          <TouchableOpacity style={styles.primaryButton} onPress={() => router.push("/booking" as any)}>
+          {/* FIXED: Uses explicit nested tab path format */}
+          <TouchableOpacity style={styles.primaryButton} onPress={() => router.push("/(tabs)/booking" as any)}>
             <Text style={styles.buttonText}>Open Booking Calendar 🗓️</Text>
           </TouchableOpacity>
 
@@ -195,7 +163,7 @@ async function handleSignUp() {
     );
   }
 
-  // CONDITIONAL RULE B: USER IS NOT AUTHENTICATED -> SHOW RECONFIGURED PORTAL CARD ON HOME PAGE
+  // CONDITIONAL VIEW B: CLIENT PORTAL GATEWAY CARD
   return (
     <View style={styles.container}>
       <View style={styles.authCard}>
@@ -281,14 +249,14 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: "#dcdcdc", padding: 14, borderRadius: 8, fontSize: 16, marginBottom: 16, backgroundColor: "#fff", color: "#222" },
   primaryButton: { backgroundColor: "#007AFF", padding: 15, borderRadius: 8, alignItems: "center", marginTop: 4 },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  signOutButton: { padding: 14, borderRadius: 8, alignItems: "center", marginTop: 24, borderWidth: 1, borderColor: "#FF3B30" },
+  signOutText: { color: "#FF3B30", fontSize: 15, fontWeight: "600" },
+  sectionHeading: { fontSize: 16, fontWeight: "700", color: "#333", marginTop: 28, marginBottom: 12 },
+  emptyText: { textAlign: "center", color: "#888", fontStyle: "italic", marginTop: 12 },
+  historyRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, paddingHorizontal: 14, backgroundColor: "#f9f9f9", borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: "#eee" },
+  historyDate: { fontSize: 15, color: "#222", fontWeight: "600" },
+  historyTime: { fontSize: 15, color: "#555", fontWeight: "500" },
   linkContainer: { marginTop: 16, alignItems: "center" },
-  blueLink: { color: "#007AFF", fontSize: 14, marginTop: 6 },
+  blueLink: { color: "#007AFF", fontSize: 14, marginVertical: 4 },
   underline: { textDecorationLine: "underline" },
-  sectionHeading: { fontSize: 16, fontWeight: "700", color: "#333", marginTop: 24, marginBottom: 12 },
-  emptyText: { fontSize: 14, color: "#888", fontStyle: "italic", textAlign: "center", marginVertical: 12 },
-  historyRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderColor: "#eee" },
-  historyDate: { fontSize: 15, color: "#222", fontWeight: "500" },
-  historyTime: { fontSize: 15, color: "#555" },
-  signOutButton: { marginTop: 28, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: "#f4f4f4", alignItems: "center" },
-  signOutText: { color: "#FF3B30", fontWeight: "600", fontSize: 14 },
 });
