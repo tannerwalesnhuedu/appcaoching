@@ -83,31 +83,30 @@ export default function BookingScreen() {
     return marked;
   };
 
-  // 3. BOOKING OPERATION HANDLER
-  async function bookSession(slotId: string, date: string, time: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.');
-    
-    setSubmitting(true);
-    const { error } = await supabase
-      .from('appointments')
-      .update({ 
-        is_booked: true, 
-        client_email: user.email, 
-        user_id: user.id 
-      })
-      .eq('id', slotId.trim());
+ async function bookSession(slotId: string, date: string, time: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.');
+  
+  setSubmitting(true);
+  const { error } = await supabase
+    .from('appointments')
+    .update({ 
+      is_booked: true, 
+      client_email: user.email, 
+      user_id: user.id 
+    })
+    .eq('id', slotId.trim());
 
-    if (error) {
-      Alert.alert('Booking Failed', 'This session might have just been reserved by someone else.');
-    } else {
-      Alert.alert('Success! 🎉', `Your appointment on ${date} at ${time} is secured.`);
-      setAllSlots((prev) => prev.filter((slot) => slot.id !== slotId));
-      setFilteredSlots((prev) => prev.filter((slot) => slot.id !== slotId));
-    }
-    setSubmitting(false);
-    fetchAvailableOpenings();
+  if (error) {
+    Alert.alert('Booking Failed', 'This session might have just been reserved by someone else.');
+  } else {
+    // ⚡ CONVENIENCE LAYER: Instantly drop the row from local view states so it vanishes instantly
+    Alert.alert('Success! 🎉', `Your appointment on ${date} at ${time} is secured.`);
+    setAllSlots((prev) => prev.filter((slot) => slot.id !== slotId));
+    setFilteredSlots((prev) => prev.filter((slot) => slot.id !== slotId));
   }
+  setSubmitting(false);
+}
 
   async function handleSignOut() {
     await supabase.auth.signOut();
