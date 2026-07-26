@@ -58,9 +58,6 @@ export default function BookingScreen() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    fetchAllOpenings();
-  }, []);
 
   const handleSelectDay = (dateString: string) => {
     setSelectedDate(dateString);
