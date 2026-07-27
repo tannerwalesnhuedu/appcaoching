@@ -127,19 +127,6 @@ const todayString = new Date().toISOString().split('T')[0];
 
   return (
     <View style={styles.container}>
-      <Calendar
-  // 🛡️ Blocks selection of any past dates
-  minDate={todayString}
-
-  // Your existing properties remain the same below, for example:
-  current={'2026-07-26'} 
-  onDayPress={(day) => {
-    setSelectedDate(day.dateString);
-  }}
-  markedDates={{
-    [selectedDate]: { selected: true, selectedColor: '#2563eb' },
-  }}
-/>
 
       <View style={styles.headerRow}>
         <Text style={styles.header}>Book a Session</Text>
