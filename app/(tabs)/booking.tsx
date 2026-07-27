@@ -1,199 +1,270 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Calendar } from 'react-native-calendars';
-import { useRouter } from "expo-router";
-import { supabase } from '../../lib/supabase/index';
+import React, { useState } from 'react';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TextInput, 
+  Pressable, 
+  ActivityIndicator, 
+  Platform,
+  Alert 
+} from 'react-native';
+import { useRouter } from 'expo-router';
 
-interface Appointment {
-  id: string;
+// Define the clear, typed input properties for our state container
+interface BookingState {
+  service_name: string;
   session_date: string;
   session_time: string;
-  is_booked: boolean;
-  user_id?: string;
+  price: number;
+  client_email: string;
 }
 
 export default function BookingScreen() {
-  const [allSlots, setAllSlots] = useState<Appointment[]>([]);
-  const [filteredSlots, setFilteredSlots] = useState<Appointment[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [formData, setFormData] = useState<BookingState>({
+    service_name: 'Premium Life Coaching',
+    session_date: '',
+    session_time: '',
+    price: 150.00,
+    client_email: ''
+  });
 
-  // 1. SECURE ROUTE AUTHENTICATION HANDSHAKE
-  useEffect(() => {
-    let isMounted = true;
+  // Calculate the minimum string value needed to disable past calendar dates
+  const getTodayString = (): string => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`; // Outputs precisely: YYYY-MM-DD
+  };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isMounted) return;
-      if (!session) {
-        // 🔒 Secure Guard: Fallback to the entry login panel
-        router.replace("/(tabs)" as any);
-      } else {
-        setCheckingAuth(false);
-        fetchAvailableOpenings(isMounted);
-      }
-    });
+  const handleBookingSubmit = async () => {
+    // Structural client-side input string validation
+    if (!formData.session_date || !formData.session_time || !formData.client_email) {
+      displayNotification('Error', 'Please fill out all required form fields.');
+      return;
+    }
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    // Secondary local safety check targeting tampered date configurations
+    const targetDate = new Date(`${formData.session_date}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  // 2. SECURE DATA FETCH ROUTINE (NAME ALIGNED)
-  async function fetchAvailableOpenings(isMounted: boolean = true) {
+    if (targetDate < today) {
+      displayNotification('Invalid Date', 'Selected booking date cannot be in the past.');
+      return;
+    }
+
     setLoading(true);
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('id, session_date, session_time, is_booked, user_id')
-      .order('session_time', { ascending: true });
+    try {
+      // Connects cleanly to your Supabase/Vercel hosted application routing logic
+      const response = await fetch('https://vercel.app', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
 
-    if (!isMounted) return;
+      const result = await response.json();
 
-    if (error) {
-      Alert.alert('Database Error', 'Could not read available calendar openings.');
-    } else if (data) {
-      setAllSlots(data as Appointment[]);
-      if (selectedDate) {
-        setFilteredSlots(
-          (data as Appointment[]).filter((slot) => slot.session_date === selectedDate && !slot.is_booked)
-        );
+      if (result.success && result.id) {
+        // Expo Router clean screen navigation transition passing our primary secure key
+        router.push({
+          pathname: '/modal', // Routes cleanly to your configured confirmation modal
+          params: { token: result.id, date: formData.session_date, time: formData.session_time, price: formData.price }
+        });
+      } else {
+        displayNotification('Booking Failed', result.error || 'Check fields and try again.');
       }
+    } catch (err: any) {
+      displayNotification('Network Error', 'Connection failed. Check server endpoints.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }
-
-  const handleSelectDay = (dateString: string) => {
-    setSelectedDate(dateString);
-    const dayMatches = allSlots.filter((slot: Appointment) => slot.session_date === dateString && !slot.is_booked);
-    setFilteredSlots(dayMatches);
   };
 
-  const getMarkedDates = () => {
-    const marked: any = {};
-    allSlots.forEach((slot) => {
-      if (!slot.is_booked) {
-        marked[slot.session_date] = { marked: true, dotColor: '#007AFF' };
-      }
-    });
-    if (selectedDate) {
-      marked[selectedDate] = { ...marked[selectedDate], selected: true, selectedColor: '#007AFF' };
+  // Safe wrapper handling cross-platform error text rendering cleanly across OS layers
+  const displayNotification = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
     }
-    return marked;
   };
-
- async function bookSession(slotId: string, date: string, time: string) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.');
-  
-  setSubmitting(true);
-  const { error } = await supabase
-    .from('appointments')
-    .update({ 
-      is_booked: true, 
-      client_email: user.email, 
-      user_id: user.id 
-    })
-    .eq('id', slotId.trim());
-
-  if (error) {
-    Alert.alert('Booking Failed', 'This session might have just been reserved by someone else.');
-  } else {
-    // ⚡ CONVENIENCE LAYER: Instantly drop the row from local view states so it vanishes instantly
-    Alert.alert('Success! 🎉', `Your appointment on ${date} at ${time} is secured.`);
-    setAllSlots((prev) => prev.filter((slot) => slot.id !== slotId));
-    setFilteredSlots((prev) => prev.filter((slot) => slot.id !== slotId));
-  }
-  setSubmitting(false);
-}
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.replace("/(tabs)" as any);
-  }
-
-  if (checkingAuth || loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading booking engine views...</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.header}>Book a Session</Text>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.subHeader}>Select a highlighted date below to view available choices.</Text>
-      
-      <View style={styles.calendarWrapper}>
-        <Calendar 
-          onDayPress={(day) => handleSelectDay(day.dateString)} 
-          markedDates={getMarkedDates()} 
-          theme={{ 
-            todayTextColor: '#007AFF', 
-            selectedDayBackgroundColor: '#007AFF', 
-            arrowColor: '#007AFF' 
-          }} 
-        />
-      </View>
+      <View style={styles.card}>
+        <Text style={styles.title}>Schedule Appointment</Text>
+        <Text style={styles.subtitle}>Select your preferred date, session hour, and complete registry layout.</Text>
 
-      {selectedDate ? (
-        <View style={{ flex: 1 }}>
-          <Text style={styles.sectionTitle}>Openings for {selectedDate}:</Text>
-          {filteredSlots.length === 0 ? (
-            <Text style={styles.noSlotsText}>No sessions listed on this specific day.</Text>
-          ) : (
-            <FlatList 
-              data={filteredSlots} 
-              keyExtractor={(item) => item.id} 
-              renderItem={({ item }) => (
-                <View style={styles.slotCard}>
-                  <View>
-                    <Text style={styles.dateText}>{item.session_date}</Text>
-                    <Text style={styles.timeText}>{item.session_time}</Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.bookButton} 
-                    disabled={submitting} 
-                    onPress={() => bookSession(item.id, item.session_date, item.session_time)}
-                  >
-                    <Text style={styles.bookButtonText}>Reserve</Text>
-                  </TouchableOpacity>
-                </View>
-              )} 
-            />
-          )}
+        {/* Read-Only Service Component Block */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Selected Program</Text>
+          <TextInput 
+            style={[styles.input, styles.disabledInput]} 
+            value={formData.service_name} 
+            editable={false} 
+          />
         </View>
-      ) : (
-        <Text style={styles.promptText}>Tap an active calendar date square to get started.</Text>
-      )}
+
+        {/* Date and Time Layout Input Row */}
+        <View style={styles.row}>
+          <View style={styles.flex1}>
+            <Text style={styles.label}>Date</Text>
+            <TextInput 
+              style={styles.input}
+              placeholder="YYYY-MM-DD"
+              // Web native fallback handles calendar restriction directly
+              {...(Platform.OS === 'web' ? { min: getTodayString() } : {})}
+              onChangeText={(text) => setFormData({ ...formData, session_date: text })}
+              value={formData.session_date}
+            />
+          </View>
+          <View style={styles.flex1}>
+            <Text style={styles.label}>Time Slot</Text>
+            <TextInput 
+              style={styles.input}
+              placeholder="10:00 AM"
+              onChangeText={(text) => setFormData({ ...formData, session_time: text })}
+              value={formData.session_time}
+            />
+          </View>
+        </View>
+
+        {/* Email Identification Block */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Email Address</Text>
+          <TextInput 
+            style={styles.input}
+            placeholder="name@domain.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            onChangeText={(text) => setFormData({ ...formData, client_email: text })}
+            value={formData.client_email}
+          />
+        </View>
+
+        {/* Metric Price Verification Card Footer */}
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceLabel}>Total Rate Due:</Text>
+          <Text style={styles.priceValue}>${formData.price.toFixed(2)}</Text>
+        </View>
+
+        {/* Native Interactive Form Submission Control */}
+        <Pressable 
+          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, loading && styles.buttonDisabled]}
+          onPress={handleBookingSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Confirm Booking Window</Text>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: '#f9f9f9', paddingTop: 60 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  header: { fontSize: 24, fontWeight: 'bold', color: '#111' },
-  signOutButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#eee' },
-  signOutText: { color: '#FF3B30', fontWeight: '600', fontSize: 13 },
-  subHeader: { fontSize: 14, color: '#666', marginBottom: 16 },
-  calendarWrapper: { backgroundColor: '#fff', borderRadius: 12, padding: 8, marginBottom: 20, borderWidth: 1, borderColor: '#eee' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 12 },
-  loadingText: { marginTop: 12, fontSize: 16, color: '#444' },
-  promptText: { textAlign: 'center', color: '#888', marginTop: 40, fontSize: 15 },
-  noSlotsText: { textAlign: 'center', color: '#999', marginTop: 20, fontSize: 14, fontStyle: 'italic' },
-  slotCard: { backgroundColor: '#fff', padding: 18, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, borderWidth: 1, borderColor: '#eee' },
-  dateText: { fontSize: 16, fontWeight: '700', color: '#222', marginBottom: 4 },
-  timeText: { fontSize: 14, color: '#555', fontWeight: '500' },
-  bookButton: { backgroundColor: '#007AFF', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 },
-  bookButtonText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  flex1: {
+    flex: 1,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
+    fontSize: 15,
+    color: '#0f172a',
+  },
+  disabledInput: {
+    backgroundColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
+    color: '#64748b',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    marginBottom: 24,
+  },
+  priceLabel: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  priceValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  button: {
+    backgroundColor: '#2563eb',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonPressed: {
+    opacity: 0.85,
+  },
+  buttonDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
 });
