@@ -137,16 +137,18 @@ const todayString = new Date().toISOString().split('T')[0];
       <Text style={styles.subHeader}>Select a highlighted date below to view available choices.</Text>
       
       <View style={styles.calendarWrapper}>
-        <Calendar 
-          onDayPress={(day) => handleSelectDay(day.dateString)} 
-          markedDates={getMarkedDates()} 
-          theme={{ 
-            todayTextColor: '#007AFF', 
-            selectedDayBackgroundColor: '#007AFF', 
-            arrowColor: '#007AFF' 
-          }} 
-        />
-      </View>
+  <Calendar
+    minDate={todayString} // 🛡️ ADD THIS LINE to block out all past dates on web, iOS, and Android
+    onDayPress={(day) => handleSelectDay(day.dateString)}
+    markedDates={getMarkedDates()}
+    theme={{
+      todayTextColor: '#007AFF',
+      selectedDayBackgroundColor: '#007AFF',
+      arrowColor: '#007AFF'
+    }}
+  />
+</View>
+
 
       {selectedDate ? (
         <View style={{ flex: 1 }}>
