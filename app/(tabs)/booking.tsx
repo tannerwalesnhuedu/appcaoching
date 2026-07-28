@@ -140,11 +140,11 @@ const handleSelectDay = (dateString: string): void => {
   
   setSelectedDate(dateString);
   
-  // FIXED: Changed allSlots to mySchedule to target where your data is stored
+  // Targets 'mySchedule' directly to filter your active database state entries
   const dayMatches: Appointment[] = mySchedule.filter((slot: Appointment) => {
     if (!slot.session_date) return false;
     
-    // Clear any white space to ensure accurate evaluation
+    // Normalizes strings cleanly to guarantee absolute verification matching
     return slot.session_date.trim() === dateString.trim();
   });
   
