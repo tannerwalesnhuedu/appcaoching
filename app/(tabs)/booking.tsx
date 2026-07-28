@@ -274,7 +274,6 @@ export default function BookingScreen(): React.JSX.Element {
     textDisabledColor: '#d9e1e8'
   }} 
 /> 
-
           </View> 
 
           {selectedDate ? ( 
