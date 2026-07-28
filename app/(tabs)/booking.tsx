@@ -142,17 +142,21 @@ export default function BookingScreen(): React.JSX.Element {
     setFilteredSlots(dayMatches); 
   }; 
 
-    const getMarkedDates = (): Record<string, any> => { 
+     const getMarkedDates = (): Record<string, any> => { 
     const marked: Record<string, any> = {}; 
     
     allSlots.forEach((slot: Appointment) => { 
       if (!slot.is_booked && slot.session_date >= todayString) { 
-        // 🌟 HIGH DENSITY TINT: Makes dates with open slots bold and blue for easy scanning
+        // 🌟 INDUSTRY STANDARD: Combines the indicator dot with clear, bold blue text coloring
         marked[slot.session_date] = { 
           marked: true, 
           dotColor: '#007AFF',
-          textColor: '#007AFF',
-          textStyle: { fontWeight: '700' }
+          customStyles: {
+            text: { 
+              color: '#007AFF', 
+              fontWeight: '750' 
+            }
+          }
         }; 
       } 
     }); 
@@ -162,7 +166,12 @@ export default function BookingScreen(): React.JSX.Element {
         ...marked[selectedDate], 
         selected: true, 
         selectedColor: '#007AFF',
-        selectedTextColor: '#ffffff'
+        customStyles: {
+          text: { 
+            color: '#ffffff', // Ensures the text numbers invert cleanly to white when clicked
+            fontWeight: '750' 
+          }
+        }
       }; 
     } 
     return marked; 
@@ -262,18 +271,18 @@ export default function BookingScreen(): React.JSX.Element {
           <Text style={styles.subHeader}>Select an active date square to view open available options.</Text> 
           <View style={styles.calendarWrapper}> 
          <Calendar 
-  minDate={todayString} 
-  disableAllTouchEventsForDisabledDays={true}
-  onDayPress={(day) => handleSelectDay(day.dateString)} 
-  markedDates={getMarkedDates()} 
-  theme={{ 
-    todayTextColor: '#007AFF', 
-    selectedDayBackgroundColor: '#007AFF', 
-    arrowColor: '#007AFF',
-    textDisabledColor: '#d9e1e8'
-  }} 
-/> 
-
+      minDate={todayString} 
+      disableAllTouchEventsForDisabledDays={true}
+      markingType={'custom'} // 🌟 CRITICAL FLAG: Turns on the styling overrides for text colors
+      onDayPress={(day) => handleSelectDay(day.dateString)} 
+      markedDates={getMarkedDates()} 
+      theme={{ 
+        todayTextColor: '#007AFF', 
+        selectedDayBackgroundColor: '#007AFF', 
+        arrowColor: '#007AFF',
+        textDisabledColor: '#d9e1e8'
+      }} 
+        /> 
           </View> 
 
           {selectedDate ? ( 
