@@ -215,6 +215,24 @@ export default function BookingScreen(): React.JSX.Element {
     ); 
   } 
 
+    async function cancelSession(slotId: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser(); 
+    if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.'); 
+
+    const { error } = await supabase
+      .from('appointments')
+      .update({ is_booked: false, user_id: null, client_email: null })
+      .eq('id', slotId);
+
+    if (error) {
+      Alert.alert("Cancellation Failed", "Could not complete cancellation at this time.");
+    } else {
+      Alert.alert("Appointment Cancelled", "Your session has been released back into open availability.");
+      setMySchedule((prev) => prev.filter((item) => item.id !== slotId));
+    }
+  }
+
+
   if (confirmedDetails) {
     return (
       <View style={styles.container}>
@@ -322,7 +340,7 @@ export default function BookingScreen(): React.JSX.Element {
           {mySchedule.length === 0 ? (
             <Text style={styles.noSlotsText}>You have no reserved time slots scheduled.</Text>
           ) : (
-            <FlatList
+                      <FlatList
               data={mySchedule}
               keyExtractor={(item: Appointment) => item.id}
               renderItem={({ item }: { item: Appointment }) => (
@@ -331,9 +349,13 @@ export default function BookingScreen(): React.JSX.Element {
                     <Text style={styles.dateText}>{item.session_date}</Text>
                     <Text style={styles.timeText}>{item.session_time}</Text>
                   </View>
-                  <View style={styles.statusBadge}>
-                    <Text style={styles.statusBadgeText}>Secured</Text>
-                  </View>
+                  {/* 🌟 UX ENHANCEMENT: Adds the functional, industry-standard cancel action button */}
+                  <TouchableOpacity 
+                    style={[styles.bookButton, { backgroundColor: '#FF3B30' }]} 
+                    onPress={() => cancelSession(item.id)}
+                  >
+                    <Text style={styles.bookButtonText}>Cancel</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             />
