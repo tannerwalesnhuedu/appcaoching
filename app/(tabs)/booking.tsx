@@ -142,19 +142,23 @@ export default function BookingScreen(): React.JSX.Element {
     setFilteredSlots(dayMatches); 
   }; 
 
-     const getMarkedDates = (): Record<string, any> => { 
+       const getMarkedDates = (): Record<string, any> => { 
     const marked: Record<string, any> = {}; 
     
     allSlots.forEach((slot: Appointment) => { 
       if (!slot.is_booked && slot.session_date >= todayString) { 
-        // 🌟 INDUSTRY STANDARD: Combines the indicator dot with clear, bold blue text coloring
+        // 🌟 INDUSTRY STANDARD: Soft blue pill background with bold blue numbers
         marked[slot.session_date] = { 
-          marked: true, 
-          dotColor: '#007AFF',
           customStyles: {
+            container: { 
+              backgroundColor: '#e6f0ff', 
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: '#b3d1ff'
+            },
             text: { 
               color: '#007AFF', 
-              fontWeight: '750' 
+              fontWeight: '700' 
             }
           }
         }; 
@@ -165,17 +169,26 @@ export default function BookingScreen(): React.JSX.Element {
       marked[selectedDate] = { 
         ...marked[selectedDate], 
         selected: true, 
-        selectedColor: '#007AFF',
         customStyles: {
+          container: { 
+            backgroundColor: '#007AFF', // Solid blue when actively tapped
+            borderRadius: 20,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 2
+          },
           text: { 
-            color: '#ffffff', // Ensures the text numbers invert cleanly to white when clicked
-            fontWeight: '750' 
+            color: '#ffffff', // Inverts cleanly to high-contrast white
+            fontWeight: '700' 
           }
         }
       }; 
     } 
     return marked; 
   }; 
+
 
 
 
@@ -288,18 +301,18 @@ export default function BookingScreen(): React.JSX.Element {
         <View style={{ flex: 1 }}>
           <Text style={styles.subHeader}>Select an active date square to view open available options.</Text> 
           <View style={styles.calendarWrapper}> 
-         <Calendar 
-      minDate={todayString} 
-      disableAllTouchEventsForDisabledDays={true}
-      markingType={'custom'} // 🌟 CRITICAL FLAG: Turns on the styling overrides for text colors
-      onDayPress={(day) => handleSelectDay(day.dateString)} 
-      markedDates={getMarkedDates()} 
-      theme={{ 
-        todayTextColor: '#007AFF', 
-        selectedDayBackgroundColor: '#007AFF', 
-        arrowColor: '#007AFF',
-        textDisabledColor: '#d9e1e8'
-      }} 
+               <Calendar 
+          minDate={todayString} 
+          disableAllTouchEventsForDisabledDays={true}
+          markingType={'custom'} // 🛡️ CRITICAL: Tells the calendar engine to render our custom background circles
+          onDayPress={(day) => handleSelectDay(day.dateString)} 
+          markedDates={getMarkedDates()} 
+          theme={{ 
+            todayTextColor: '#2b1a9e', 
+            arrowColor: '#007AFF',
+            textDisabledColor: '#d9e1e8',
+            calendarBackground: '#ffffff'
+          }} 
         /> 
           </View> 
 
