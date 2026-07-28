@@ -77,6 +77,7 @@ export default function HomeScreen(): React.JSX.Element {
 
   const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
 
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {/* Welcome Header */}
