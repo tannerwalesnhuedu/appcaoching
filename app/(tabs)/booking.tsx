@@ -142,18 +142,17 @@ export default function BookingScreen(): React.JSX.Element {
     setFilteredSlots(dayMatches); 
   }; 
 
-   const getMarkedDates = (): Record<string, any> => { 
+    const getMarkedDates = (): Record<string, any> => { 
     const marked: Record<string, any> = {}; 
     
     allSlots.forEach((slot: Appointment) => { 
       if (!slot.is_booked && slot.session_date >= todayString) { 
-        // 🌟 Gives dates with open slots a soft blue highlight background
+        // 🌟 HIGH DENSITY TINT: Makes dates with open slots bold and blue for easy scanning
         marked[slot.session_date] = { 
           marked: true, 
           dotColor: '#007AFF',
-          customStyles: {
-            container: { backgroundColor: '#e6f0ff', borderRadius: 6 }
-          }
+          textColor: '#007AFF',
+          textStyle: { fontWeight: '700' }
         }; 
       } 
     }); 
@@ -168,6 +167,7 @@ export default function BookingScreen(): React.JSX.Element {
     } 
     return marked; 
   }; 
+
 
 
   async function bookSession(slotId: string, date: string, time: string): Promise<void> { 
@@ -261,10 +261,9 @@ export default function BookingScreen(): React.JSX.Element {
         <View style={{ flex: 1 }}>
           <Text style={styles.subHeader}>Select an active date square to view open available options.</Text> 
           <View style={styles.calendarWrapper}> 
-          <Calendar 
+         <Calendar 
   minDate={todayString} 
   disableAllTouchEventsForDisabledDays={true}
-  markingType={'custom'} // 🌟 Add this line so your custom background highlights render correctly
   onDayPress={(day) => handleSelectDay(day.dateString)} 
   markedDates={getMarkedDates()} 
   theme={{ 
@@ -274,6 +273,7 @@ export default function BookingScreen(): React.JSX.Element {
     textDisabledColor: '#d9e1e8'
   }} 
 /> 
+
           </View> 
 
           {selectedDate ? ( 
