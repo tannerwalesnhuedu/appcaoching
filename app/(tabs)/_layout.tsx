@@ -40,7 +40,7 @@ export default function TabLayout() {
         headerShown: useClientOnlyValue(false, true), 
       }} 
     > 
-      {/* HOME SCREEN */} 
+      {/* 1. HOME SCREEN */} 
       <Tabs.Screen 
         name="index" 
         options={{ 
@@ -48,12 +48,11 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => ( 
             <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} /> 
           ), 
-          // 🛠️ FIXED: Removed broken modal routing action from top right corner
           headerRight: undefined, 
         }} 
       /> 
 
-      {/* SCHEDULE SCREEN */} 
+      {/* 2. BOOKING ENGINE DASHBOARD */} 
       <Tabs.Screen 
         name="booking" 
         options={{ 
@@ -64,7 +63,7 @@ export default function TabLayout() {
         }} 
       /> 
 
-      {/* ABOUT SCREEN */} 
+      {/* 3. ABOUT VIEW */} 
       <Tabs.Screen 
         name="about" 
         options={{ 
@@ -75,12 +74,11 @@ export default function TabLayout() {
         }} 
       /> 
 
-      {/* 🛡️ EXPO ROUTER CLEANUP BLINKER */}
-      {/* Hard-hides the duplicate tab item bar node from compiling onto your device layers */}
+      {/* 🛡️ SECURITY DEPLOYMENT PROTOCOL: HARD-BLOCK UNUSED NAVIGATION TAB ENTRY BLOCKS */}
       <Tabs.Screen
         name="modal"
         options={{
-          href: null,
+          href: null, // This forcefully strips the button and layout footprint off your bar entirely
         }}
       />
     </Tabs> 
