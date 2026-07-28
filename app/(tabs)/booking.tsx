@@ -135,21 +135,19 @@ export default function BookingScreen(): React.JSX.Element {
     setLoading(false); 
   } 
 
- const handleSelectDay = (dateString: string): void => {
-  // 1. Prevent selecting past dates if necessary
+const handleSelectDay = (dateString: string): void => {
   if (dateString < todayString) return;
   
-  // 2. Clear and set the selected date state using the correct parameter name
   setSelectedDate(dateString);
   
-  // 3. Filter your local state state directly against the session_date string
-  // If data is saved via setMySchedule, filter mySchedule instead:
-const dayMatches: Appointment[] = mySchedule.filter((slot: Appointment) => {
-    // Replace line 148 with this:
-return slot.session_date.substring(0, 10) === dateString.substring(0, 10);
+  // FIXED: Changed allSlots to mySchedule to target where your data is stored
+  const dayMatches: Appointment[] = mySchedule.filter((slot: Appointment) => {
+    if (!slot.session_date) return false;
+    
+    // Clear any white space to ensure accurate evaluation
+    return slot.session_date.trim() === dateString.trim();
   });
   
-  // 4. Update the filtered slots state to trigger UI rendering
   setFilteredSlots(dayMatches);
 };
 
