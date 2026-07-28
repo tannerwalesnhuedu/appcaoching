@@ -6,7 +6,9 @@ import {
   StyleSheet, 
   Text, 
   TouchableOpacity, 
-  View 
+  View,
+  Modal,
+  Platform
 } from 'react-native'; 
 import { Calendar } from 'react-native-calendars'; 
 import { useRouter } from "expo-router"; 
@@ -20,7 +22,6 @@ interface Appointment {
   user_id?: string; 
 } 
 
-// 🛡️ Fixed index brackets to prevent array comparison errors
 const todayString = new Date().toISOString().split('T')[0];
 
 export default function BookingScreen() { 
@@ -30,6 +31,10 @@ export default function BookingScreen() {
   const [loading, setLoading] = useState(true); 
   const [submitting, setSubmitting] = useState(false); 
   const [checkingAuth, setCheckingAuth] = useState(true); 
+  
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [confirmedDetails, setConfirmedDetails] = useState<Appointment | null>(null);
+
   const router = useRouter(); 
 
   useEffect(() => { 
@@ -37,21 +42,15 @@ export default function BookingScreen() {
     supabase.auth.getSession().then(({ data: { session } }) => { 
       if (!isMounted) return; 
       if (!session) { 
-        // TEMPORARILY DISABLED REDIRECT SO YOU CAN DESIGN THE VIEW WITHOUT LOGGING IN:
-        console.log("No active user session detected");
-        setCheckingAuth(false);
-        setLoading(false);
-        // router.replace("/(tabs)" as any); // Comment this out during testing!
+        router.replace("/(tabs)" as any); 
       } else { 
         setCheckingAuth(false); 
         fetchAvailableOpenings(isMounted); 
       } 
     }); 
-    return () => { 
-      isMounted = false; 
-    }; 
-  }, []);
-  // 2. SECURE DATA FETCH ROUTINE
+    return () => { isMounted = false; }; 
+  }, []); 
+
   async function fetchAvailableOpenings(isMounted: boolean = true) { 
     setLoading(true); 
     const { data, error } = await supabase 
@@ -74,11 +73,7 @@ export default function BookingScreen() {
   } 
 
   const handleSelectDay = (dateString: string) => { 
-    // 🛡️ SECURITY GUARD: Block click execution instantly if a past date is selected
-    if (dateString < todayString) {
-      return;
-    }
-
+    if (dateString < todayString) return;
     setSelectedDate(dateString); 
     const dayMatches = allSlots.filter((slot: Appointment) => slot.session_date === dateString && !slot.is_booked); 
     setFilteredSlots(dayMatches); 
@@ -102,15 +97,19 @@ export default function BookingScreen() {
     if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.'); 
     
     setSubmitting(true); 
-    const { error } = await supabase 
-      .from('appointments') 
-      .update({ is_booked: true, client_email: user.email, user_id: user.id }) 
-      .eq('id', slotId.trim()); 
+    
+    const { data: success, error } = await supabase.rpc('secure_reserve_appointment', {
+      target_slot_id: slotId,
+      target_user_id: user.id,
+      target_user_email: user.email
+    });
 
-    if (error) { 
-      Alert.alert('Booking Failed', 'This session might have just been reserved by someone else.'); 
+    if (error || !success) { 
+      Alert.alert('Booking Conflict', 'This specific session window was just claimed by another browser thread.'); 
     } else { 
-      Alert.alert('Success! 🎉', `Your appointment on ${date} at ${time} is secured.`); 
+      setConfirmedDetails({ id: slotId, session_date: date, session_time: time, is_booked: true });
+      setShowSuccessModal(true); 
+      
       setAllSlots((prev) => prev.filter((slot) => slot.id !== slotId)); 
       setFilteredSlots((prev) => prev.filter((slot) => slot.id !== slotId)); 
     } 
@@ -140,7 +139,7 @@ export default function BookingScreen() {
         </TouchableOpacity> 
       </View> 
       
-      <Text style={styles.subHeader}>Select a highlighted date below to view available choices.</Text> 
+      <Text style={styles.subHeader}>Select an active date square to review open time allocations.</Text> 
       
       <View style={styles.calendarWrapper}> 
         <Calendar 
@@ -187,7 +186,37 @@ export default function BookingScreen() {
       ) : ( 
         <Text style={styles.promptText}>Tap an active calendar date square to get started.</Text> 
       )} 
-    </View> 
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showSuccessModal}
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.successIconBubble}>
+              <Text style={styles.successIconText}>✓</Text>
+            </View>
+            <Text style={styles.modalTitle}>Booking Confirmed!</Text>
+            <Text style={styles.modalSubtitle}>Your appointment window has been securely locked into production.</Text>
+            
+            <View style={styles.receiptContainer}>
+              <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Date:</Text><Text style={styles.receiptVal}>{confirmedDetails?.session_date}</Text></View>
+              <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Time:</Text><Text style={styles.receiptVal}>{confirmedDetails?.session_time}</Text></View>
+              <View style={[styles.receiptRow, styles.receiptTotalRow]}>
+                <Text style={styles.receiptTotalLabel}>Amount Paid:</Text>
+                <Text style={styles.receiptTotalValue}>$150.00</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.closeOverlayBtn} onPress={() => setShowSuccessModal(false)}>
+              <Text style={styles.closeOverlayText}>Acknowledge & Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
   ); 
 } 
 
@@ -209,4 +238,23 @@ const styles = StyleSheet.create({
   timeText: { fontSize: 14, color: '#555', fontWeight: '500' }, 
   bookButton: { backgroundColor: '#007AFF', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 }, 
   bookButtonText: { color: '#fff', fontSize: 14, fontWeight: 'bold' }, 
+  
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalCard: { backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 380, padding: 24, alignItems: 'center' },
+  successIconBubble: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#e6f4ea', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  successIconText: { color: '#137333', fontSize: 24, fontWeight: 'bold' },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: '#111', marginBottom: 8 },
+  modalSubtitle: { fontSize: 14, color: '#555', textAlign: 'center', marginBottom: 20 },
+  
+  receiptContainer: { width: '100%', borderTopWidth: 1, borderColor: '#eee', paddingTop: 12, marginBottom: 20 },
+  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  receiptLabel: { fontSize: 14, color: '#444' },
+  receiptVal: { fontSize: 14, color: '#222', fontWeight: '600' },
+  
+  receiptTotalRow: { borderTopWidth: 1, borderColor: '#eee', paddingTop: 8, marginTop: 8 },
+  receiptTotalLabel: { fontSize: 15, color: '#111', fontWeight: '700' },
+  receiptTotalValue: { fontSize: 15, color: '#111', fontWeight: '700' },
+
+  closeOverlayBtn: { backgroundColor: '#007AFF', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
+  closeOverlayText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
 });
