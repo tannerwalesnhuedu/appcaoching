@@ -32,13 +32,16 @@ export default function BookingScreen() {
   const [checkingAuth, setCheckingAuth] = useState(true); 
   const router = useRouter(); 
 
-  // 1. SECURE ROUTE AUTHENTICATION HANDSHAKE 
   useEffect(() => { 
     let isMounted = true; 
     supabase.auth.getSession().then(({ data: { session } }) => { 
       if (!isMounted) return; 
       if (!session) { 
-        router.replace("/(tabs)" as any); 
+        // TEMPORARILY DISABLED REDIRECT SO YOU CAN DESIGN THE VIEW WITHOUT LOGGING IN:
+        console.log("No active user session detected");
+        setCheckingAuth(false);
+        setLoading(false);
+        // router.replace("/(tabs)" as any); // Comment this out during testing!
       } else { 
         setCheckingAuth(false); 
         fetchAvailableOpenings(isMounted); 
@@ -47,8 +50,7 @@ export default function BookingScreen() {
     return () => { 
       isMounted = false; 
     }; 
-  }, []); 
-
+  }, []);
   // 2. SECURE DATA FETCH ROUTINE
   async function fetchAvailableOpenings(isMounted: boolean = true) { 
     setLoading(true); 
