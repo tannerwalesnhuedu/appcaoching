@@ -96,44 +96,42 @@ export default function BookingScreen(): React.JSX.Element {
     return () => { isMounted = false; }; 
   }, [activeTab]); 
 
-  async function fetchData(isMounted: boolean): Promise<void> { 
-    setLoading(true); 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+ async function fetchData(isMountedFlag: boolean): Promise<void> {
+  setLoading(true);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
 
-    if (activeTab === 'book') {
-      const { data, error } = await supabase 
-        .from('appointments') 
-        .select('id, session_date, session_time, is_booked, user_id') 
-        .order('session_time', { ascending: true }); 
+  if (activeTab === 'book') {
+    // 1. Fetch OPEN slots for users to book
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, session_date, session_time, is_booked, user_id')
+      .eq('is_booked', false) // Pulls open, unbooked items
+      .order('session_date', { ascending: true });
 
-      if (!isMounted) return; 
-      if (error) { 
-        Alert.alert('Database Error', 'Could not read available calendar openings.'); 
-      } else if (data) { 
-        setAllSlots(data as Appointment[]); 
-        if (selectedDate) { 
-          setFilteredSlots( 
-            (data as Appointment[]).filter((slot) => slot.session_date === selectedDate && !slot.is_booked) 
-          ); 
-        } 
-      }
-    } else {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('id, session_date, session_time, is_booked, user_id')
-        .eq('user_id', user.id)
-        .order('session_date', { ascending: true });
-
-      if (!isMounted) return;
-      if (error) {
-        Alert.alert('Error', 'Could not retrieve your schedule history.');
-      } else if (data) {
-        setMySchedule(data as Appointment[]);
-      }
+    if (!isMountedFlag) return;
+    if (error) {
+      console.error(error);
+    } else if (data) {
+      setMySchedule(data as Appointment[]);
     }
-    setLoading(false); 
-  } 
+  } else {
+    // 2. Fetch CONFIRMED items for this specific user account
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, session_date, session_time, is_booked, user_id')
+      .eq('user_id', user.id)
+      .order('session_date', { ascending: true });
+
+    if (!isMountedFlag) return;
+    if (error) {
+      console.error(error);
+    } else if (data) {
+      setMySchedule(data as Appointment[]);
+    }
+  }
+  setLoading(false);
+}
 
 const handleSelectDay = (dateString: string): void => {
   if (dateString < todayString) return;
