@@ -272,12 +272,12 @@ export default function BookingScreen(): React.JSX.Element {
           <View style={styles.calendarWrapper}> 
          <Calendar 
   minDate={todayString} 
-      disableAllTouchEventsForDisabledDays={true}
-      markingType={'custom'} // 🌟 CRITICAL FLAG: Turns on the styling overrides for text colors
-      onDayPress={(day) => handleSelectDay(day.dateString)} 
-      markedDates={getMarkedDates()} 
-      theme={{ 
-        todayTextColor: '#007AFF', 
+  disableAllTouchEventsForDisabledDays={true}
+  markingType={'custom'} // 🌟 CRITICAL FLAG: Turns on the styling overrides for text colors
+  onDayPress={(day) => handleSelectDay(day.dateString)} 
+  markedDates={getMarkedDates()} 
+  theme={{ 
+    todayTextColor: '#007AFF', 
         selectedDayBackgroundColor: '#007AFF', 
         arrowColor: '#007AFF',
         textDisabledColor: '#d9e1e8'
