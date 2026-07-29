@@ -74,13 +74,6 @@ export default function TabLayout() {
         }} 
       /> 
 
-      {/* 🛡️ SECURITY DEPLOYMENT PROTOCOL: HARD-BLOCK UNUSED NAVIGATION TAB ENTRY BLOCKS */}
-      <Tabs.Screen
-        name="modal"
-        options={{
-          href: null, // This forcefully strips the button and layout footprint off your bar entirely
-        }}
-      />
     </Tabs> 
   ); 
 } 
