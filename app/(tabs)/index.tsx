@@ -377,12 +377,13 @@ timelineLeftBlock: {
   alignItems: 'center',
   gap: 12
 },
-timelineNodeDot: {
-  width: 8,
-  height: 8,
-  borderRadius: 4,
-  backgroundColor: '#cbd5e1'
+timelineNodeDot: { 
+  width: 8, 
+  height: 8, 
+  borderRadius: 4, 
+  backgroundColor: '#2b1a9e' 
 },
+
 timelineDateText: {
   fontSize: 14,
   fontWeight: '600',
