@@ -282,6 +282,42 @@ const handleSelectDay = (dateString: string): void => {
     );
   }
 
+  if (confirmedDetails) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.successCard}>
+          <View style={styles.successIconBubble}>
+            <Text style={styles.successIconText}>✓</Text>
+          </View>
+          <Text style={styles.successTitle}>Reservation Confirmed!</Text>
+          <Text style={styles.successSubtitle}>Your session parameter records have been successfully added to production.</Text>
+          
+          <View style={styles.receiptContainer}>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Selected Date:</Text>
+             <Text style={styles.receiptVal}>{(confirmedDetails as any).session_date}</Text>
+            </View>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Time Window:</Text>
+             <Text style={styles.receiptVal}>{(confirmedDetails as any).session_time}</Text>
+            </View>
+            <View style={[styles.receiptRow, styles.receiptTotalRow]}>
+              <Text style={styles.receiptTotalLabel}>Amount Charged:</Text>
+              <Text style={styles.receiptTotalValue}>$150.00</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.primaryActionBtn} 
+            onPress={() => { setConfirmedDetails(null); setSelectedDate(''); }}
+          >
+            <Text style={styles.primaryActionText}>Return to Booking Interface</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
@@ -308,81 +344,66 @@ const handleSelectDay = (dateString: string): void => {
 
       {activeTab === 'book' ? (
         <View style={{ flex: 1 }}>
-          <Text style={styles.subHeader}>Select an active date square to view open available options.</Text> 
-          <View style={styles.calendarWrapper}> 
-               <Calendar 
-          minDate={todayString} 
-          disableAllTouchEventsForDisabledDays={true}
-          markingType={'custom'} // 🛡️ CRITICAL: Tells the calendar engine to render our custom background circles
-          onDayPress={(day) => handleSelectDay(day.dateString)} 
-          markedDates={getMarkedDates()} 
-          theme={{ 
-            todayTextColor: '#2b1a9e', 
-            arrowColor: '#007AFF',
-            textDisabledColor: '#d9e1e8',
-            calendarBackground: '#ffffff'
-          }} 
-        /> 
-          </View> 
-
-          {selectedDate ? ( 
-            <View style={{ flex: 1 }}> 
-              <Text style={styles.sectionTitle}>Openings for {selectedDate}:</Text> 
-              {filteredSlots.length === 0 ? ( 
-                <Text style={styles.noSlotsText}>No openings listed on this specific day.</Text> 
+          {selectedDate ? (
+            <View style={{ flex: 1, width: '100%' }}>
+              <Text style={styles.sectionTitle}>Openings for {selectedDate}:</Text>
+              
+              {filteredSlots.length === 0 ? (
+                <Text style={styles.noSlotsText}>No openings listed on this specific day.</Text>
               ) : (
-                <FlatList 
-                  data={filteredSlots} 
-                  keyExtractor={(item: Appointment) => item.id} 
-                  renderItem={({ item }: { item: Appointment }) => ( 
-                    <View style={styles.slotCard}> 
-                      <View> 
-                        <Text style={styles.dateText}>{item.session_date}</Text> 
-                        <Text style={styles.timeText}>{item.session_time}</Text> 
-                      </View> 
+                <View style={{ gap: 12, paddingVertical: 10 }}>
+                  {filteredSlots.map((item: Appointment) => (
+                    <View key={item.id} style={styles.slotCard}>
+                      <View>
+                        <Text style={styles.dateText}>{item.session_date}</Text>
+                        <Text style={styles.timeText}>{item.session_time}</Text>
+                      </View>
                       <TouchableOpacity 
                         style={styles.bookButton} 
                         disabled={submitting} 
                         onPress={() => bookSession(item.id, item.session_date, item.session_time)} 
-                      > 
-                        <Text style={styles.bookButtonText}>Reserve</Text> 
-                      </TouchableOpacity> 
-                    </View> 
-                  )} 
-                /> 
-              )} 
-            </View> 
-          ) : ( 
-            <Text style={styles.promptText}>Tap an active calendar date square to review options.</Text> 
-          )} 
+                      >
+                        <Text style={styles.bookButtonText}>Reserve</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={styles.container}>
+              <Text style={styles.noSlotsText}>Select an active date square to view open available options.</Text>
+            </View>
+          )}
         </View>
       ) : (
+        /* 2. "My Schedule" Tab Content */
         <View style={{ flex: 1 }}>
           <Text style={styles.sectionTitle}>Your Confirmed Appointments:</Text>
+          
           {mySchedule.length === 0 ? (
             <Text style={styles.noSlotsText}>You have no reserved time slots scheduled.</Text>
           ) : (
-                      <FlatList
-              data={mySchedule}
-              keyExtractor={(item: Appointment) => item.id}
-              renderItem={({ item }: { item: Appointment }) => (
-                <View style={styles.slotCard}>
+            <View style={{ gap: 12, paddingVertical: 10 }}>
+              {mySchedule.map((item: Appointment) => (
+                <View key={item.id} style={styles.slotCard}>
                   <View>
                     <Text style={styles.dateText}>{item.session_date}</Text>
                     <Text style={styles.timeText}>{item.session_time}</Text>
                   </View>
-                  {/* 🌟 UX ENHANCEMENT: Adds the functional, industry-standard cancel action button */}
                   <TouchableOpacity 
-                    style={[styles.bookButton, { backgroundColor: '#FF3B30' }]} 
-                    onPress={() => cancelSession(item.id)}
+                    style={styles.bookButton} 
+                    disabled={submitting} 
+                    onPress={() => cancelSession(item.id)} 
                   >
-                    <Text style={styles.bookButtonText}>Cancel</Text>
+                    <Text style={styles.bookButtonText}>Cancel Booking</Text>
                   </TouchableOpacity>
                 </View>
-              )}
-            />
+              ))}
+            </View>
           )}
         </View>
       )}
-    </View> 
-  )}; 
+    </View>
+  );
+}
