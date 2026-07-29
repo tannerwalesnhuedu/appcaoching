@@ -299,7 +299,7 @@ const handleSelectDay = (dateString: string): void => {
             </View>
             <View style={styles.receiptRow}>
               <Text style={styles.receiptLabel}>Time Window:</Text>
-             <Text style={styles.receiptVal}>{(confirmedDetails as any).session_time}</Text>
+              <Text style={styles.receiptVal}>{(confirmedDetails as any).session_time}</Text>
             </View>
             <View style={[styles.receiptRow, styles.receiptTotalRow]}>
               <Text style={styles.receiptTotalLabel}>Amount Charged:</Text>
