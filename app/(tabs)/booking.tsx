@@ -82,19 +82,34 @@ export default function BookingScreen(): React.JSX.Element {
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true); 
   const router = useRouter(); 
 
-  useEffect(() => { 
-    let isMounted: boolean = true; 
-    supabase.auth.getSession().then(({ data: { session } }) => { 
-      if (!isMounted) return; 
-      if (!session) { 
-        router.replace("/(tabs)" as any); 
-      } else { 
-        setCheckingAuth(false); 
-        fetchData(isMounted); 
-      } 
-    }); 
-    return () => { isMounted = false; }; 
-  }, [activeTab]); 
+   // Hook 1: Handle User Authentication and Routing (Runs once on mount)
+  useEffect(() => {
+    let isMounted: boolean = true;
+    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      if (!session) {
+        router.replace("/(tabs)" as any);
+      } else {
+        setCheckingAuth(false);
+      }
+    });
+
+    return () => { isMounted = false; };
+  }, []); // Empty array means this only runs once when the page loads
+
+  // Hook 2: Handle Database Fetching (Runs every time the active tab changes!)
+  useEffect(() => {
+    let isMounted: boolean = true;
+    
+    // Only fetch data if the user is authenticated and not loading auth state
+    if (!checkingAuth) {
+      fetchData(isMounted);
+    }
+
+    return () => { isMounted = false; };
+  }, [activeTab, checkingAuth]); // Re-runs data fetch instantly whenever you flip tabs
+
 
   async function fetchData(isMounted: boolean): Promise<void> { 
     setLoading(true); 
