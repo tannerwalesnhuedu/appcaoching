@@ -96,76 +96,65 @@ export default function BookingScreen(): React.JSX.Element {
     return () => { isMounted = false; }; 
   }, [activeTab]); 
 
- async function fetchData(isMountedFlag: boolean): Promise<void> {
-  setLoading(true);
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  async function fetchData(isMounted: boolean): Promise<void> { 
+    setLoading(true); 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-  if (activeTab === 'book') {
-    // 1. Fetch OPEN slots for users to book
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('id, session_date, session_time, is_booked, user_id')
-      .eq('is_booked', false) // Pulls open, unbooked items
-      .order('session_date', { ascending: true });
+    if (activeTab === 'book') {
+      const { data, error } = await supabase 
+        .from('appointments') 
+        .select('id, session_date, session_time, is_booked, user_id') 
+        .order('session_time', { ascending: true }); 
 
-    if (!isMountedFlag) return;
-    if (error) {
-      console.error(error);
-    } else if (data) {
-      setMySchedule(data as Appointment[]);
+      if (!isMounted) return; 
+      if (error) { 
+        Alert.alert('Database Error', 'Could not read available calendar openings.'); 
+      } else if (data) { 
+        setAllSlots(data as Appointment[]); 
+        if (selectedDate) { 
+          setFilteredSlots( 
+            (data as Appointment[]).filter((slot) => slot.session_date === selectedDate && !slot.is_booked) 
+          ); 
+        } 
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('id, session_date, session_time, is_booked, user_id')
+        .eq('user_id', user.id)
+        .order('session_date', { ascending: true });
+
+      if (!isMounted) return;
+      if (error) {
+        Alert.alert('Error', 'Could not retrieve your schedule history.');
+      } else if (data) {
+        setMySchedule(data as Appointment[]);
+      }
     }
-  } else {
-    // 2. Fetch CONFIRMED items for this specific user account
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('id, session_date, session_time, is_booked, user_id')
-      .eq('user_id', user.id)
-      .order('session_date', { ascending: true });
+    setLoading(false); 
+  } 
 
-    if (!isMountedFlag) return;
-    if (error) {
-      console.error(error);
-    } else if (data) {
-      setMySchedule(data as Appointment[]);
-    }
-  }
-  setLoading(false);
-}
+  const handleSelectDay = (dateString: string): void => { 
+    if (dateString < todayString) return; 
+    setSelectedDate(dateString); 
+    const dayMatches: Appointment[] = allSlots.filter((slot: Appointment) => slot.session_date === dateString && !slot.is_booked); 
+    setFilteredSlots(dayMatches); 
+  }; 
 
-const handleSelectDay = (dateString: string): void => {
-  if (dateString < todayString) return;
-  
-  setSelectedDate(dateString);
-  
-  // Targets 'mySchedule' directly to filter your active database state entries
-  const dayMatches: Appointment[] = mySchedule.filter((slot: Appointment) => {
-    if (!slot.session_date) return false;
-    
-    // Normalizes strings cleanly to guarantee absolute verification matching
-    return slot.session_date.trim() === dateString.trim();
-  });
-  
-  setFilteredSlots(dayMatches);
-};
-
-       const getMarkedDates = (): Record<string, any> => { 
+     const getMarkedDates = (): Record<string, any> => { 
     const marked: Record<string, any> = {}; 
     
     allSlots.forEach((slot: Appointment) => { 
       if (!slot.is_booked && slot.session_date >= todayString) { 
-        // 🌟 INDUSTRY STANDARD: Soft blue pill background with bold blue numbers
+        // 🌟 INDUSTRY STANDARD: Combines the indicator dot with clear, bold blue text coloring
         marked[slot.session_date] = { 
+          marked: true, 
+          dotColor: '#007AFF',
           customStyles: {
-            container: { 
-              backgroundColor: '#e6f0ff', 
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor: '#b3d1ff'
-            },
             text: { 
               color: '#007AFF', 
-              fontWeight: '700' 
+              fontWeight: '750' 
             }
           }
         }; 
@@ -176,26 +165,17 @@ const handleSelectDay = (dateString: string): void => {
       marked[selectedDate] = { 
         ...marked[selectedDate], 
         selected: true, 
+        selectedColor: '#007AFF',
         customStyles: {
-          container: { 
-            backgroundColor: '#007AFF', // Solid blue when actively tapped
-            borderRadius: 20,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 2
-          },
           text: { 
-            color: '#ffffff', // Inverts cleanly to high-contrast white
-            fontWeight: '700' 
+            color: '#ffffff', // Ensures the text numbers invert cleanly to white when clicked
+            fontWeight: '750' 
           }
         }
       }; 
     } 
     return marked; 
   }; 
-
 
 
 
@@ -235,24 +215,6 @@ const handleSelectDay = (dateString: string): void => {
     ); 
   } 
 
-    async function cancelSession(slotId: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser(); 
-    if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.'); 
-
-    const { error } = await supabase
-      .from('appointments')
-      .update({ is_booked: false, user_id: null, client_email: null })
-      .eq('id', slotId);
-
-    if (error) {
-      Alert.alert("Cancellation Failed", "Could not complete cancellation at this time.");
-    } else {
-      Alert.alert("Appointment Cancelled", "Your session has been released back into open availability.");
-      setMySchedule((prev) => prev.filter((item) => item.id !== slotId));
-    }
-  }
-
-
   if (confirmedDetails) {
     return (
       <View style={styles.container}>
@@ -275,42 +237,6 @@ const handleSelectDay = (dateString: string): void => {
           <TouchableOpacity style={styles.primaryActionBtn} onPress={() => { setConfirmedDetails(null); setSelectedDate(''); } }>
             <Text style={styles.primaryActionText}>Return to Booking Interface</Text>
            </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  if (confirmedDetails) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.successCard}>
-          <View style={styles.successIconBubble}>
-            <Text style={styles.successIconText}>✓</Text>
-          </View>
-          <Text style={styles.successTitle}>Reservation Confirmed!</Text>
-          <Text style={styles.successSubtitle}>Your session parameter records have been successfully added to production.</Text>
-          
-          <View style={styles.receiptContainer}>
-            <View style={styles.receiptRow}>
-              <Text style={styles.receiptLabel}>Selected Date:</Text>
-             <Text style={styles.receiptVal}>{(confirmedDetails as any).session_date}</Text>
-            </View>
-            <View style={styles.receiptRow}>
-              <Text style={styles.receiptLabel}>Time Window:</Text>
-              <Text style={styles.receiptVal}>{(confirmedDetails as any).session_time}</Text>
-            </View>
-            <View style={[styles.receiptRow, styles.receiptTotalRow]}>
-              <Text style={styles.receiptTotalLabel}>Amount Charged:</Text>
-              <Text style={styles.receiptTotalValue}>$150.00</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity 
-            style={styles.primaryActionBtn} 
-            onPress={() => { setConfirmedDetails(null); setSelectedDate(''); }}
-          >
-            <Text style={styles.primaryActionText}>Return to Booking Interface</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -342,66 +268,77 @@ const handleSelectDay = (dateString: string): void => {
 
       {activeTab === 'book' ? (
         <View style={{ flex: 1 }}>
-          {selectedDate ? (
-            <View style={{ flex: 1, width: '100%' }}>
-              <Text style={styles.sectionTitle}>Openings for {selectedDate}:</Text>
-              
-              {filteredSlots.length === 0 ? (
-                <Text style={styles.noSlotsText}>No openings listed on this specific day.</Text>
+          <Text style={styles.subHeader}>Select an active date square to view open available options.</Text> 
+          <View style={styles.calendarWrapper}> 
+         <Calendar 
+  minDate={todayString} 
+      disableAllTouchEventsForDisabledDays={true}
+      markingType={'custom'} // 🌟 CRITICAL FLAG: Turns on the styling overrides for text colors
+      onDayPress={(day) => handleSelectDay(day.dateString)} 
+      markedDates={getMarkedDates()} 
+      theme={{ 
+        todayTextColor: '#007AFF', 
+        selectedDayBackgroundColor: '#007AFF', 
+        arrowColor: '#007AFF',
+        textDisabledColor: '#d9e1e8'
+      }} 
+        /> 
+          </View> 
+
+          {selectedDate ? ( 
+            <View style={{ flex: 1 }}> 
+              <Text style={styles.sectionTitle}>Openings for {selectedDate}:</Text> 
+              {filteredSlots.length === 0 ? ( 
+                <Text style={styles.noSlotsText}>No openings listed on this specific day.</Text> 
               ) : (
-                <View style={{ gap: 12, paddingVertical: 10 }}>
-                  {filteredSlots.map((item: Appointment) => (
-                    <View key={item.id} style={styles.slotCard}>
-                      <View>
-                        <Text style={styles.dateText}>{item.session_date}</Text>
-                        <Text style={styles.timeText}>{item.session_time}</Text>
-                      </View>
+                <FlatList 
+                  data={filteredSlots} 
+                  keyExtractor={(item: Appointment) => item.id} 
+                  renderItem={({ item }: { item: Appointment }) => ( 
+                    <View style={styles.slotCard}> 
+                      <View> 
+                        <Text style={styles.dateText}>{item.session_date}</Text> 
+                        <Text style={styles.timeText}>{item.session_time}</Text> 
+                      </View> 
                       <TouchableOpacity 
                         style={styles.bookButton} 
                         disabled={submitting} 
                         onPress={() => bookSession(item.id, item.session_date, item.session_time)} 
-                      >
-                        <Text style={styles.bookButtonText}>Reserve</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={styles.container}>
-              <Text style={styles.noSlotsText}>Select an active date square to view open available options.</Text>
-            </View>
-          )}
+                      > 
+                        <Text style={styles.bookButtonText}>Reserve</Text> 
+                      </TouchableOpacity> 
+                    </View> 
+                  )} 
+                /> 
+              )} 
+            </View> 
+          ) : ( 
+            <Text style={styles.promptText}>Tap an active calendar date square to review options.</Text> 
+          )} 
         </View>
       ) : (
-        /* 2. "My Schedule" Tab Content */
         <View style={{ flex: 1 }}>
           <Text style={styles.sectionTitle}>Your Confirmed Appointments:</Text>
-          
           {mySchedule.length === 0 ? (
             <Text style={styles.noSlotsText}>You have no reserved time slots scheduled.</Text>
           ) : (
-            <View style={{ gap: 12, paddingVertical: 10 }}>
-              {mySchedule.map((item: Appointment) => (
-                <View key={item.id} style={styles.slotCard}>
+            <FlatList
+              data={mySchedule}
+              keyExtractor={(item: Appointment) => item.id}
+              renderItem={({ item }: { item: Appointment }) => (
+                <View style={styles.slotCard}>
                   <View>
                     <Text style={styles.dateText}>{item.session_date}</Text>
                     <Text style={styles.timeText}>{item.session_time}</Text>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.bookButton} 
-                    disabled={submitting} 
-                    onPress={() => cancelSession(item.id)} 
-                  >
-                    <Text style={styles.bookButtonText}>Cancel Booking</Text>
-                  </TouchableOpacity>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusBadgeText}>Secured</Text>
+                  </View>
                 </View>
-              ))}
-            </View>
+              )}
+            />
           )}
         </View>
       )}
-    </View>
-  );
-}
+    </View> 
+  )}; 
