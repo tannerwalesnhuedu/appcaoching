@@ -135,21 +135,28 @@ export default function BookingScreen(): React.JSX.Element {
     setLoading(false); 
   } 
 
-const handleSelectDay = (dateString: string): void => {
-  if (dateString < todayString) return;
-  
-  setSelectedDate(dateString);
-  
-  // Targets 'mySchedule' directly to filter your active database state entries
-  const dayMatches: Appointment[] = mySchedule.filter((slot: Appointment) => {
-    if (!slot.session_date) return false;
-    
-    // Normalizes strings cleanly to guarantee absolute verification matching
-    return slot.session_date.trim() === dateString.trim();
-  });
-  
-  setFilteredSlots(dayMatches);
-};
+  // 1. Keep your date selection handler lightweight and fast
+  const handleSelectDay = (dateString: string): void => {
+    if (dateString < todayString) return;
+    setSelectedDate(dateString);
+  };
+
+  // 2. Add an automatic synchronization block right below it
+  useEffect(() => {
+    if (!selectedDate) {
+      setFilteredSlots([]);
+      return;
+    }
+
+    // Automatically processes your dataset whenever selectedDate changes
+    const dayMatches: Appointment[] = mySchedule.filter((slot: Appointment) => {
+      if (!slot.session_date) return false;
+      return slot.session_date.trim() === selectedDate.trim();
+    });
+
+    setFilteredSlots(dayMatches);
+  }, [selectedDate, mySchedule]); // Fires instantly when date strings toggle
+
 
        const getMarkedDates = (): Record<string, any> => { 
     const marked: Record<string, any> = {}; 
