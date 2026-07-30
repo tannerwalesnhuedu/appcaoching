@@ -28,6 +28,8 @@ export default function HomeScreen(): React.JSX.Element {
   const [upcomingSessions, setUpcomingSessions] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
+  
+
 
   useEffect(() => {
     let isMounted = true;
@@ -79,6 +81,20 @@ export default function HomeScreen(): React.JSX.Element {
  // FIXED: Added [0] to grab the first upcoming item from the array safely
 const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
 
+
+// 1. Add this state variable near your other state hooks at the top:
+const [isMounted, setIsMounted] = useState<boolean>(false);
+
+// 2. Add this hook to toggle it to true immediately after the component mounts:
+useEffect(() => {
+  setIsMounted(true);
+}, []);
+
+// 3. Scroll down right above your main return ( ... ) block (around line 70) 
+// and add this guard block so the layout paints synchronously:
+if (!isMounted) {
+  return <></>;
+}
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
