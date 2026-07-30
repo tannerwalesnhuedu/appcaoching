@@ -58,13 +58,13 @@ export default function HomeScreen(): React.JSX.Element {
       .order('session_time', { ascending: true });
 
     if (!isMounted) return;
-    if (error) {
-      Alert.alert('Data Retrieval Error', 'Could not read your personal appointment queue updates.');
-    } else if (data) {
-      setUpcomingSessions(data as Appointment[]);
-    }
-    setLoading(false);
-  }
+      if (error) {
+           console.error(error);
+   } else if (data) {
+     setUpcomingSessions(data as Appointment[]);
+   }
+   setLoading(false); // This forces the spinning circle to go away!
+}
 
   if (loading) {
     return (
