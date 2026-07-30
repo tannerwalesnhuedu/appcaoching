@@ -46,11 +46,13 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <Stack>
+      {/* Keep your valid application routes exactly as listed in your console array */}
+      <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
+      
+      {/* 🛑 MAKE SURE THERE IS NO <Stack.Screen name="modal" ... /> HERE */}
+    </Stack>
   );
 }
