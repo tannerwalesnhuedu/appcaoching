@@ -57,14 +57,20 @@ export default function HomeScreen(): React.JSX.Element {
       .order('session_date', { ascending: true })
       .order('session_time', { ascending: true });
 
-    if (!isMounted) return;
-      if (error) {
-           console.error(error);
-   } else if (data) {
-     setUpcomingSessions(data as Appointment[]);
-   }
-   setLoading(false); // This forces the spinning circle to go away!
+    // Look at lines 60-67 at the very bottom of your database query function:
+  if (!isMounted) return;
+  
+  if (error) {
+    console.error(error);
+  } else if (data) {
+    setUpcomingSessions(data as Appointment[]);
+  }
+
+  // CRITICAL: Move this completely outside the if/else statements!
+  // This turns off the spinning loop immediately when your list is empty.
+  setLoading(false); 
 }
+
 
   if (loading) {
     return (
