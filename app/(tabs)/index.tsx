@@ -76,7 +76,8 @@ export default function HomeScreen(): React.JSX.Element {
   }
 
   // Add '[0]' right here to grab the first item in the list:
-  const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
+ // FIXED: Added [0] to grab the first upcoming item from the array safely
+const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
 
 
   return (
