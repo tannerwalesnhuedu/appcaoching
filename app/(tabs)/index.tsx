@@ -22,30 +22,30 @@ export default function HomeScreen(): React.JSX.Element {
   const router = useRouter(); 
 
 
-  
-  // Mount/Hydration handler block
+    // Real-time Auth listener handling both client mounting and session tracking
   useEffect(() => {
     setIsMounted(true);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        // Keeps your existing state variable updated
+        setUserEmail(session.user.email || 'Valued Client');
+        
+        // Triggers your appointment data fetcher
+        fetchUserAppointments(session.user.id, true);
+        setLoading(false);
+      } else {
+        setLoading(false);
+        router.replace("/login" as any);
+      }
+    });
+
+    // Clean up the active listener when the user leaves the home screen
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Authentication validation handler block
-  useEffect(() => { 
-    let isMountedAuth = true; 
-    
-    supabase.auth.getSession().then(({ data: { session } }) => { 
-      if (!isMounted) {
-  return null; // This prevents the server/client HTML content mismatch
-} 
-      if (!session) { 
-        router.replace("/login" as any); 
-      } else { 
-        setUserEmail(session.user.email || 'Valued Client'); 
-        fetchUserAppointments(session.user.id, isMountedAuth); 
-      } 
-    }); 
-
-    return () => { isMountedAuth = false; }; 
-  }, []); 
 
   // 2. CORE DATABASE CALL IMPLEMENTATION
   async function fetchUserAppointments(userId: string, isMountedFlag: boolean): Promise<void> { 
