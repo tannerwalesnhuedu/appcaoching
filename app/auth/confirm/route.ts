@@ -43,19 +43,23 @@ export async function GET(request: Request) {
       }
     );
 
-    // Validate token hash sequence against the Supabase database engine
+       // Validate token hash sequence against the Supabase database engine
     const { error } = await supabase.auth.verifyOtp({ 
       type: 'magiclink', 
       token_hash 
     });
     
     if (!error) {
-      // Append redirection location properties directly onto headers
-      responseHeaders.set('Location', redirectTo.toString());
+      // 1. Force the response headers to bundle the newly generated session cookies
       return new Response(null, {
         status: 307,
-        headers: responseHeaders,
+        headers: {
+          ...Object.fromEntries(responseHeaders.entries()),
+          'Location': redirectTo.toString(),
+          'Cache-Control': 'no-store, max-age=0, must-revalidate',
+        },
       });
+
     }
   }
 
