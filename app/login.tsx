@@ -62,12 +62,15 @@ export default function LoginScreen() {
   // FIXED: Explicitly stringify the target URL parameter to prevent Expo build-step stripping
   const targetRedirectUrl = "https://steady-paletas-0ac2df.netlify.app";
 
-  const { error } = await supabase.auth.signInWithOtp({
-    email: email.trim().toLowerCase(),
-    options: {
-      emailRedirectTo: targetRedirectUrl,
-    },
-  });
+ // Inside your login submission handler inside app/login.tsx
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: {
+        emailRedirectTo: targetRedirectUrl, // Use your string variable from line 63
+      },
+    });
+
+
   
   setLoading(false);
   if (error) {
