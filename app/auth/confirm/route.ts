@@ -1,55 +1,65 @@
-import { createServerClient } from '@supabase/ssr'
-import { type NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr';
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const token_hash = searchParams.get('token_hash')
-  const type = searchParams.get('type')
-  const next = searchParams.get('next') ?? '/'
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const token_hash = url.searchParams.get('token_hash');
+  const type = url.searchParams.get('type');
+  const next = url.searchParams.get('next') ?? '/';
 
-  const redirectTo = request.nextUrl.clone()
-  redirectTo.pathname = next
-  redirectTo.searchParams.delete('token_hash')
-  redirectTo.searchParams.delete('type')
+  // Create a clean destination URL matching your base origin
+  const redirectTo = new URL(next, url.origin);
 
   if (token_hash && type) {
-    // 1. Resolve the asynchronous cookie store safely for modern Next.js
-    const cookieStore = await cookies()
-    
+    // Read headers out of the incoming connection request
+    const requestHeaders = new Headers(request.headers);
+    const responseHeaders = new Headers();
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
-            return cookieStore.getAll()
+            // Parses any existing browser authentication cookies
+            const cookieHeader = requestHeaders.get('Cookie') ?? '';
+            return cookieHeader.split(';').map(c => {
+              const [name, ...value] = c.trim().split('=');
+              return { name, value: value.join('=') };
+            }).filter(c => c.name);
           },
           setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              )
-            } catch {
-              // Safe block for server component environment mutations
-            }
+            // Securely appends updated auth state cookies to our outgoing header payload
+            cookiesToSet.forEach(({ name, value, options }) => {
+              let cookieStr = `${name}=${value}`;
+              if (options?.maxAge) cookieStr += `; Max-Age=${options.maxAge}`;
+              if (options?.path) cookieStr += `; Path=${options.path}`;
+              if (options?.domain) cookieStr += `; Domain=${options.domain}`;
+              if (options?.secure) cookieStr += '; Secure';
+              if (options?.httpOnly) cookieStr += '; HttpOnly';
+              responseHeaders.append('Set-Cookie', cookieStr);
+            });
           },
         },
       }
-    )
+    );
 
-    // 2. Exchange the hash variable for a live session state
+    // Validate token hash sequence against the Supabase database engine
     const { error } = await supabase.auth.verifyOtp({ 
       type: 'magiclink', 
       token_hash 
-    })
+    });
     
     if (!error) {
-      return NextResponse.redirect(redirectTo)
+      // Append redirection location properties directly onto headers
+      responseHeaders.set('Location', redirectTo.toString());
+      return new Response(null, {
+        status: 307,
+        headers: responseHeaders,
+      });
     }
   }
 
-  // Fallback state if validation drops parameters
-  redirectTo.pathname = '/login?error=verification-failed'
-  return NextResponse.redirect(redirectTo)
+  // Route back to the login screen with an explicit error parameter flag if validation breaks down
+  const failureUrl = new URL('/login?error=verification-failed', url.origin);
+  return Response.redirect(failureUrl.toString(), 307);
 }
