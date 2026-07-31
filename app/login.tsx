@@ -60,7 +60,7 @@ export default function LoginScreen() {
   setLoading(true);
 
   // FIXED: Explicitly stringify the target URL parameter to prevent Expo build-step stripping
-  const targetRedirectUrl = "https://steady-paletas-0ac2df.netlify.app";
+  const targetRedirectUrl = "https://appcaoching.vercel.app";
 
  // Inside your login submission handler inside app/login.tsx
     const { error } = await supabase.auth.signInWithOtp({
