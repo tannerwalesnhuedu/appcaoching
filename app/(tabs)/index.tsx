@@ -21,6 +21,8 @@ export default function HomeScreen(): React.JSX.Element {
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const router = useRouter(); 
 
+
+  
   // Mount/Hydration handler block
   useEffect(() => {
     setIsMounted(true);
@@ -31,7 +33,9 @@ export default function HomeScreen(): React.JSX.Element {
     let isMountedAuth = true; 
     
     supabase.auth.getSession().then(({ data: { session } }) => { 
-      if (!isMountedAuth) return; 
+      if (!isMounted) {
+  return null; // This prevents the server/client HTML content mismatch
+} 
       if (!session) { 
         router.replace("/login" as any); 
       } else { 
