@@ -88,6 +88,11 @@ export default function HomeScreen(): React.JSX.Element {
   // 5. SECURE SAFE DESTRUCTURING FOR RECORD METRICS
   const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null; 
 
+// Replace line 91-93 with this:
+if (!isMounted || loading) {
+  return <></>; // This fixes the TypeScript error safely
+}
+  
   // 6. UI COMPONENT LAYOUT GENERATION
   return ( 
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}> 
