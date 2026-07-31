@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.110.8",
     "expo": "~57.0.9",
     "expo-constants": "~57.0.7",

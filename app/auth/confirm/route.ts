@@ -14,32 +14,42 @@ export async function GET(request: NextRequest) {
   redirectTo.searchParams.delete('type')
 
   if (token_hash && type) {
-    const cookieStore = cookies()
+    // 1. Resolve the asynchronous cookie store safely for modern Next.js
+    const cookieStore = await cookies()
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() { return cookieStore.getAll() },
+          getAll() {
+            return cookieStore.getAll()
+          },
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
                 cookieStore.set(name, value, options)
               )
-            } catch {}
+            } catch {
+              // Safe block for server component environment mutations
+            }
           },
         },
       }
     )
 
-    // Exchange the verification hash for an active, authentic session context
-    const { error } = await supabase.auth.verifyOtp({ type: 'magiclink', token_hash })
+    // 2. Exchange the hash variable for a live session state
+    const { error } = await supabase.auth.verifyOtp({ 
+      type: 'magiclink', 
+      token_hash 
+    })
+    
     if (!error) {
       return NextResponse.redirect(redirectTo)
     }
   }
 
-  // Redirect to an explicit login-failed layout route if verification parameters mismatch
+  // Fallback state if validation drops parameters
   redirectTo.pathname = '/login?error=verification-failed'
   return NextResponse.redirect(redirectTo)
 }
