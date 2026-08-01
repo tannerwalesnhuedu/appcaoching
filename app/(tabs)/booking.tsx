@@ -221,7 +221,8 @@ useEffect(() => {
     const { data: success, error } = await supabase.rpc('secure_reserve_appointment', {
       target_slot_id: slotId,
       target_user_id: user.id,
-      target_user_email: user.email
+      target_user_email: user.email,
+      price: price
     });
 
     if (error || !success) {
