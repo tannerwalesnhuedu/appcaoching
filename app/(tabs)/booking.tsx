@@ -39,6 +39,9 @@ export default function BookingScreen(): React.JSX.Element {
   const [submitting, setSubmitting] = useState<boolean>(false); 
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true); 
   const router = useRouter(); 
+  // Add this near your other useState hooks at the top of the component
+  const [user, setUser] = useState<any>(null);
+
 
    // Hook 1: Handle User Authentication and Routing (Runs once on mount)
   useEffect(() => {
@@ -67,6 +70,17 @@ export default function BookingScreen(): React.JSX.Element {
 
     return () => { isMounted = false; };
   }, [activeTab, checkingAuth]); // Re-runs data fetch instantly whenever you flip tabs
+
+  // Add this right around line 73 (completely independent of your other code)
+useEffect(() => {
+  const syncUserSession = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      setUser(authUser);
+    }
+  };
+  syncUserSession();
+}, [checkingAuth]); // Re-runs safely whenever checkingAuth updates
 
 
   async function fetchData(isMounted: boolean): Promise<void> { 
@@ -346,32 +360,47 @@ return (
                     <Text style={styles.noSlotsText}>No openings listed on this specific day.</Text>
                   </View>
                 ) : (
-                  <FlatList 
-                    data={processedSlots} 
-                    keyExtractor={(item: Appointment) => item.id}
-                    style={styles.modalScrollableWindow}
-                    showsVerticalScrollIndicator={true}
-                    renderItem={({ item }: { item: Appointment }) => (
-                      <View style={styles.slotCard}>
-                        <View style={styles.slotDetails}>
-                          <View style={styles.timeBadge}>
-                            <Text style={styles.timeBadgeText}>{item.session_time}</Text>
-                          </View>
-                          <Text style={styles.dateLabelText}>Coaching Available</Text>
-                        </View>
-                        <TouchableOpacity 
-                          style={styles.bookButton} 
-                          disabled={submitting} 
-                          onPress={() => {
-                            bookSession(item.id, item.session_date, item.session_time);
-                            setSelectedDate(''); // Auto-dismisses popup dialog on secure checkout completion
-                          }} 
-                        >
-                          <Text style={styles.bookButtonText}>Reserve</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )} 
-                  />
+                  // app/(tabs)/booking.tsx ➔ Inside your Modal's FlatList component, update the renderItem:
+<FlatList 
+  data={processedSlots} 
+  keyExtractor={(item: Appointment) => item.id}
+  style={styles.modalScrollableWindow}
+  showsVerticalScrollIndicator={true}
+  renderItem={({ item }: { item: Appointment }) => (
+    <View style={styles.slotCard}>
+      <View style={styles.slotDetails}>
+        {/* Time Window Indicator */}
+        <View style={styles.timeBadge}>
+          <Text style={styles.timeBadgeText}>{item.session_time}</Text>
+        </View>
+        
+        {/* 💵 NEW: Industry Standard Price Display */}
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceLabelText}>$150.00</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.bookButton} 
+        disabled={submitting} 
+        onPress={() => {
+          // 1. Block booking if the user token or profile is missing
+  if (!user) {
+    // Navigate them to your authentication screen
+    router.push('/login' as any); 
+    return;
+  }
+
+          bookSession(item.id, item.session_date, item.session_time);
+          setSelectedDate(''); 
+        }} 
+      >
+        <Text style={styles.bookButtonText}>Reserve</Text>
+      </TouchableOpacity>
+    </View>
+  )} 
+/>
+
                 )}
               </View>
             </View>
@@ -466,5 +495,16 @@ const styles = StyleSheet.create({
   closeModalButton: { padding: 6 },
   closeModalButtonText: { fontSize: 18, color: '#6b7280' },
   modalScrollableWindow: { maxHeight: 300, marginBottom: 12 },
-  modalEmptyStateBox: { paddingVertical: 40, alignItems: 'center' }
+  modalEmptyStateBox: { paddingVertical: 40, alignItems: 'center' },
+    
+  // ADD THESE TWO BLOCKS:
+  priceContainer: {
+    padding: 8,
+    // Add any container layout styling you need here
+  },
+  priceLabelText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000', // Adjust color to fit your UI theme
+  },
 });
