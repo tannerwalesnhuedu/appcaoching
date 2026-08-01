@@ -48,32 +48,39 @@ export default function HomeScreen(): React.JSX.Element {
 
 
   // 2. CORE DATABASE CALL IMPLEMENTATION
-  async function fetchUserAppointments(userId: string, isMountedFlag: boolean): Promise<void> { 
-    setLoading(true); 
+   const fetchUserAppointments = async (userId: string, showLoading = false) => {
+    if (showLoading) setLoading(true);
     
-    const { data, error } = await supabase 
-      .from('appointments') 
-      .select('id, session_date, session_time, is_booked, user_id') 
-      .eq('user_id', userId) 
-      .order('session_date', { ascending: true }) 
-      .order('session_time', { ascending: true }); 
+    try {
+      // 💡 INDUSTRY STANDARD: Explicit table column selection with ordered date limits
+      const { data, error } = await supabase
+        .from('appointments') // Ensure this matches your exact Supabase table name
+        .select('id, session_date, session_time, is_booked')
+        .eq('user_id', userId) // Connects to the logged in user profile ID context
+        .gte('session_date', new Date().toISOString().split('T')[0]) // Only fetch future dates
+        .order('session_date', { ascending: true })
+        .limit(1); // Grabs the single closest upcoming window record
 
-    if (!isMountedFlag) return; 
-    
-    if (error) { 
-      Alert.alert('Data Retrieval Error', 'Could not read your personal appointment queue updates.'); 
-    } else if (data) { 
-      setUpcomingSessions(data as Appointment[]); 
-    } 
-    
-    // ADJUSTMENT MADE HERE: Always sets loading to false, even if database is empty!
-    setLoading(false); 
-  } 
+      if (error) throw error;
 
-  // 3. HYDRATION ESCAPE RENDERING BLOCK
-  if (!isMounted) {
-    return <></>;
-  }
+      if (data && data.length > 0) {
+        const nextAppointment = data[0];
+        
+        // 1. Update your "Your Next Appointment" card layout states
+        setUpcomingSessions([nextAppointment]); 
+        
+        // 2. Update your total count badge (Total Sessions counter card)
+        // If you have a separate counter state, calculate total rows:
+        // setTotalSessionsCount(data.length);
+      } else {
+        setUpcomingSessions([]);
+      }
+    } catch (err) {
+      console.error("Error fetching homepage dashboard stats:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // 4. LOADING MASK VIEW SWITCH
   if (loading) { 
