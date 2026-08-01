@@ -1,60 +1,18 @@
 import React, { useEffect, useState } from 'react'; 
 import { 
-  ActivityIndicator, 
-  Alert, 
-  FlatList, 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
-  View 
+  // --- PASTE THIS IN PLACE OF LINES 3 THROUGH 10 ---
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Modal
 } from 'react-native'; 
 import { Calendar } from 'react-native-calendars'; 
 import { useRouter } from "expo-router"; 
 import { supabase } from '../../lib/supabase/index'; 
-
-// 🛡️ Global Styles Sheet object instantiated at top scope
-const styles = StyleSheet.create({ 
-  container: { flex: 1, padding: 24, backgroundColor: '#f9f9f9', paddingTop: 60 }, 
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' }, 
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }, 
-  header: { fontSize: 24, fontWeight: 'bold', color: '#111' }, 
-  signOutButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#eee' }, 
-  signOutText: { color: '#FF3B30', fontWeight: '600', fontSize: 13 }, 
-  subHeader: { fontSize: 14, color: '#666', marginBottom: 16 }, 
-  calendarWrapper: { backgroundColor: '#fff', borderRadius: 12, padding: 8, marginBottom: 20, borderWidth: 1, borderColor: '#eee' }, 
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 12 }, 
-  loadingText: { marginTop: 12, fontSize: 16, color: '#444' }, 
-  promptText: { textAlign: 'center', color: '#888', marginTop: 40, fontSize: 15 }, 
-  noSlotsText: { textAlign: 'center', color: '#999', marginTop: 20, fontSize: 14, fontStyle: 'italic' }, 
-  slotCard: { backgroundColor: '#fff', padding: 18, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, borderWidth: 1, borderColor: '#eee' }, 
-  dateText: { fontSize: 16, fontWeight: '700', color: '#222', marginBottom: 4 }, 
-  timeText: { fontSize: 14, color: '#555', fontWeight: '500' }, 
-  bookButton: { backgroundColor: '#007AFF', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8 }, 
-  bookButtonText: { color: '#fff', fontSize: 14, fontWeight: 'bold' }, 
-  
-  segmentContainer: { flexDirection: 'row', backgroundColor: '#e2e8f0', padding: 4, borderRadius: 10, marginBottom: 20 },
-  segmentBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
-  segmentBtnActive: { backgroundColor: '#ffffff' },
-  segmentText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
-  segmentTextActive: { color: '#0f172a' },
-  statusBadge: { backgroundColor: '#e6f4ea', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
-  statusBadgeText: { color: '#137333', fontSize: 12, fontWeight: '700' },
-
-  successCard: { backgroundColor: '#ffffff', borderRadius: 16, padding: 24, alignItems: 'center', marginTop: 40, borderWidth: 1, borderColor: '#eee' },
-  successIconBubble: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#e6f4ea', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  successIconText: { color: '#137333', fontSize: 24, fontWeight: 'bold' },
-  successTitle: { fontSize: 22, fontWeight: '700', color: '#0f172a', marginBottom: 6 },
-  successSubtitle: { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  receiptContainer: { width: '100%', backgroundColor: '#f8fafc', borderRadius: 12, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: '#e2e8f0' },
-  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  receiptLabel: { fontSize: 14, color: '#64748b' },
-  receiptVal: { fontSize: 14, fontWeight: '600', color: '#0f172a' },
-  receiptTotalRow: { borderTopWidth: 1, borderTopColor: '#cbd5e1', borderStyle: 'dashed', paddingTop: 12, marginTop: 12 },
-  receiptTotalLabel: { fontSize: 14, fontWeight: '600', color: '#0f172a' },
-  receiptTotalValue: { fontSize: 16, fontWeight: '700', color: '#007AFF' },
-  primaryActionBtn: { width: '100%', backgroundColor: '#0f172a', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  primaryActionText: { color: '#ffffff', fontSize: 15, fontWeight: '600' }
-});
 
 interface Appointment { 
   id: string; 
@@ -216,19 +174,38 @@ export default function BookingScreen(): React.JSX.Element {
     setSubmitting(false); 
   } 
 
-  async function handleSignOut(): Promise<void> { 
-    await supabase.auth.signOut(); 
-    router.replace("/(tabs)" as any); 
-  } 
+  // Replace lines 219-222 with this:
+async function handleSignOut(): Promise<void> {
+  try {
+    await supabase.auth.signOut();
+    // 💡 INDUSTRY STANDARD: Push the user completely out to the login checkpoint screen
+    router.replace("/login" as any);
+  } catch (error) {
+    console.error("Error signing out:", error);
+  }
+}
+
 
   if (checkingAuth || loading) { 
     return ( 
-      <View style={styles.center}> 
+      <View style={styles.centerContainer}> 
         <ActivityIndicator size="large" color="#007AFF" /> 
         <Text style={styles.loadingText}>Loading engine services securely...</Text> 
       </View> 
     ); 
   } 
+
+  // --- PASTE THIS IN EXACTLY AT LINE 197 ---
+  const processedSlots = filteredSlots.filter((item: Appointment) => {
+    if (!selectedDate) return false;
+    try {
+      const selectedFormatted = new Date(selectedDate).toDateString();
+      const itemFormatted = new Date(item.session_date).toDateString();
+      return selectedFormatted === itemFormatted;
+    } catch {
+      return item.session_date === selectedDate;
+    }
+  });
 
   if (confirmedDetails) {
     return (
@@ -256,9 +233,11 @@ export default function BookingScreen(): React.JSX.Element {
       </View>
     );
   }
-
-  return (
-    <View style={styles.container}>
+// --- PASTE THIS STARTING AT LINE 267 TO REPLACE THE REST OF THE FILE ---
+return (
+  <View style={styles.container}>
+    <View style={styles.centeredContentWrapper}>
+      
       <View style={styles.headerRow}>
         <Text style={styles.header}>Dashboard</Text>
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
@@ -267,93 +246,179 @@ export default function BookingScreen(): React.JSX.Element {
       </View>
 
       <View style={styles.segmentContainer}>
-        <TouchableOpacity 
-          style={[styles.segmentBtn, activeTab === 'book' && styles.segmentBtnActive]} 
-          onPress={() => setActiveTab('book')}
-        >
+        <TouchableOpacity style={[styles.segmentBtn, activeTab === 'book' && styles.segmentBtnActive]} onPress={() => setActiveTab('book')} >
           <Text style={[styles.segmentText, activeTab === 'book' && styles.segmentTextActive]}>Book Session</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.segmentBtn, activeTab === 'schedule' && styles.segmentBtnActive]} 
-          onPress={() => setActiveTab('schedule')}
-        >
+        <TouchableOpacity style={[styles.segmentBtn, activeTab === 'schedule' && styles.segmentBtnActive]} onPress={() => setActiveTab('schedule')} >
           <Text style={[styles.segmentText, activeTab === 'schedule' && styles.segmentTextActive]}>My Schedule</Text>
         </TouchableOpacity>
       </View>
 
       {activeTab === 'book' ? (
         <View style={{ flex: 1 }}>
-          <Text style={styles.subHeader}>Select an active date square to view open available options.</Text> 
-          <View style={styles.calendarWrapper}> 
-         <Calendar 
-  minDate={todayString} 
-  disableAllTouchEventsForDisabledDays={true}
-  markingType={'custom'} // 🌟 CRITICAL FLAG: Turns on the styling overrides for text colors
-  onDayPress={(day) => handleSelectDay(day.dateString)} 
-  markedDates={getMarkedDates()} 
-  theme={{ 
-    todayTextColor: '#007AFF', 
-        selectedDayBackgroundColor: '#007AFF', 
-        arrowColor: '#007AFF',
-        textDisabledColor: '#d9e1e8'
-      }} 
-        /> 
-          </View> 
+          <Text style={styles.subHeader}>Select an active date square to view open available options.</Text>
+          <View style={styles.calendarWrapper}>
+            <Calendar 
+              minDate={todayString} 
+              disableAllTouchEventsForDisabledDays={true} 
+              markingType={'custom'} 
+              onDayPress={(day) => handleSelectDay(day.dateString)} 
+              markedDates={getMarkedDates()} 
+              theme={{ 
+                todayTextColor: '#002b1a', 
+                selectedDayBackgroundColor: '#002b1a', 
+                arrowColor: '#002b1a', 
+                textDisabledColor: '#d9e1e8' 
+              }} 
+            />
+          </View>
 
-          {selectedDate ? ( 
-            <View style={{ flex: 1 }}> 
-              <Text style={styles.sectionTitle}>Openings for {selectedDate}:</Text> 
-              {filteredSlots.length === 0 ? ( 
-                <Text style={styles.noSlotsText}>No openings listed on this specific day.</Text> 
-              ) : (
-                <FlatList 
-                  data={filteredSlots} 
-                  keyExtractor={(item: Appointment) => item.id} 
-                  renderItem={({ item }: { item: Appointment }) => ( 
-                    <View style={styles.slotCard}> 
-                      <View> 
-                        <Text style={styles.dateText}>{item.session_date}</Text> 
-                        <Text style={styles.timeText}>{item.session_time}</Text> 
-                      </View> 
-                      <TouchableOpacity 
-                        style={styles.bookButton} 
-                        disabled={submitting} 
-                        onPress={() => bookSession(item.id, item.session_date, item.session_time)} 
-                      > 
-                        <Text style={styles.bookButtonText}>Reserve</Text> 
-                      </TouchableOpacity> 
-                    </View> 
-                  )} 
-                /> 
-              )} 
-            </View> 
-          ) : ( 
-            <Text style={styles.promptText}>Tap an active calendar date square to review options.</Text> 
-          )} 
+          {/* 🌟 SCROLLABLE POPUP MODAL DIALOG OVERLAY */}
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={!!selectedDate}
+            onRequestClose={() => setSelectedDate('')}
+          >
+            <View style={styles.modalOverlayScrim}>
+              <View style={styles.modalCardContainer}>
+                
+                {/* Modal Title Banner */}
+                <View style={styles.modalHeaderRow}>
+                  <View>
+                    <Text style={styles.modalTitleText}>Available Slots</Text>
+                    <Text style={styles.modalDateSubtitle}>{selectedDate}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.closeModalButton} onPress={() => setSelectedDate('')}>
+                    <Text style={styles.closeModalButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Securely Scrollable Interactive List Box */}
+                {processedSlots.length === 0 ? (
+                  <View style={styles.modalEmptyStateBox}>
+                    <Text style={styles.noSlotsText}>No openings listed on this specific day.</Text>
+                  </View>
+                ) : (
+                  <FlatList 
+                    data={processedSlots} 
+                    keyExtractor={(item: Appointment) => item.id}
+                    style={styles.modalScrollableWindow}
+                    showsVerticalScrollIndicator={true}
+                    renderItem={({ item }: { item: Appointment }) => (
+                      <View style={styles.slotCard}>
+                        <View style={styles.slotDetails}>
+                          <View style={styles.timeBadge}>
+                            <Text style={styles.timeBadgeText}>{item.session_time}</Text>
+                          </View>
+                          <Text style={styles.dateLabelText}>Coaching Available</Text>
+                        </View>
+                        <TouchableOpacity 
+                          style={styles.bookButton} 
+                          disabled={submitting} 
+                          onPress={() => {
+                            bookSession(item.id, item.session_date, item.session_time);
+                            setSelectedDate(''); // Auto-dismisses popup dialog on secure checkout completion
+                          }} 
+                        >
+                          <Text style={styles.bookButtonText}>Reserve</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )} 
+                  />
+                )}
+              </View>
+            </View>
+          </Modal>
+
+          {!selectedDate && (
+            <Text style={styles.promptText}>Tap an active calendar date square to review options.</Text>
+          )}
         </View>
       ) : (
         <View style={{ flex: 1 }}>
           <Text style={styles.sectionTitle}>Your Confirmed Appointments:</Text>
           {mySchedule.length === 0 ? (
-            <Text style={styles.noSlotsText}>You have no reserved time slots scheduled.</Text>
+            <View style={styles.emptyStateBox}>
+              <Text style={styles.noSlotsText}>You have no reserved time slots scheduled.</Text>
+            </View>
           ) : (
-            <FlatList
-              data={mySchedule}
-              keyExtractor={(item: Appointment) => item.id}
+            <FlatList 
+              data={mySchedule} 
+              keyExtractor={(item: Appointment) => item.id} 
               renderItem={({ item }: { item: Appointment }) => (
                 <View style={styles.slotCard}>
-                  <View>
-                    <Text style={styles.dateText}>{item.session_date}</Text>
-                    <Text style={styles.timeText}>{item.session_time}</Text>
+                  <View style={styles.slotDetails}>
+                    <View style={[styles.timeBadge, { backgroundColor: '#e6f4ea' }]}>
+                      <Text style={[styles.timeBadgeText, { color: '#137333' }]}>{item.session_time}</Text>
+                    </View>
+                    <Text style={styles.dateLabelText}>{item.session_date}</Text>
                   </View>
                   <View style={styles.statusBadge}>
                     <Text style={styles.statusBadgeText}>Secured</Text>
                   </View>
                 </View>
-              )}
+              )} 
             />
           )}
         </View>
       )}
-    </View> 
-  )}; 
+    </View>
+  </View>
+);
+}
+
+// 🎨 COMPREHENSIVE RESPONSIVE STYLES CONTAINER MAPPED BELOW
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f9fafb', alignItems: 'center', justifyContent: 'flex-start', width: '100%' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
+  centeredContentWrapper: { width: '100%', maxWidth: 960, paddingHorizontal: 20, paddingTop: 24, flex: 1 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  header: { fontSize: 28, fontWeight: 'bold', color: '#111' },
+  signOutButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' },
+  signOutText: { color: '#dc2626', fontWeight: '600', fontSize: 14 },
+  segmentContainer: { flexDirection: 'row', backgroundColor: '#e5e7eb', padding: 4, borderRadius: 8, marginBottom: 16 },
+  segmentBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
+  segmentBtnActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+  segmentText: { fontSize: 14, fontWeight: '500', color: '#4b5563' },
+  segmentTextActive: { color: '#002b1a', fontWeight: '600' },
+  subHeader: { fontSize: 14, color: '#6b7280', marginBottom: 12 },
+  calendarWrapper: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fff', padding: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6 },
+  slotCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: 16, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#e5e7eb', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 4 },
+  slotDetails: { flexDirection: 'row', alignItems: 'center' },
+  timeBadge: { backgroundColor: '#e0f2fe', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, marginRight: 12 },
+  timeBadgeText: { color: '#0369a1', fontWeight: '600', fontSize: 14 },
+  dateLabelText: { fontSize: 15, fontWeight: '500', color: '#374151' },
+  bookButton: { backgroundColor: '#002b1a', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6 },
+  bookButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  loadingText: { marginTop: 12, color: '#374151', fontSize: 15, fontWeight: '500' },
+  emptyStateBox: { padding: 32, backgroundColor: '#ffffff', borderRadius: 8, borderWidth: 1, borderStyle: 'dashed', borderColor: '#d1d5db', alignItems: 'center', marginTop: 8 },
+  noSlotsText: { textAlign: 'center', color: '#9ca3af', fontSize: 14 },
+  promptText: { textAlign: 'center', color: '#6b7280', marginTop: 40, fontSize: 15 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 },
+  statusBadge: { backgroundColor: '#e6f4ea', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 },
+  statusBadgeText: { color: '#137333', fontSize: 12, fontWeight: '600' },
+  successCard: { backgroundColor: '#fff', padding: 32, borderRadius: 12, alignItems: 'center', width: '100%', maxWidth: 500, borderWidth: 1, borderColor: '#e5e7eb' },
+  successIconBubble: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#e6f4ea', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  successIconText: { color: '#137333', fontSize: 24, fontWeight: 'bold' },
+  successTitle: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  successSubtitle: { fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  receiptContainer: { width: '100%', backgroundColor: '#f9fafb', padding: 16, borderRadius: 8, marginBottom: 24 },
+  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  receiptLabel: { color: '#6b7280', fontSize: 14 },
+  receiptVal: { color: '#111827', fontWeight: '600', fontSize: 14 },
+  receiptTotalRow: { borderTopWidth: 1, borderTopColor: '#d1d5db', paddingTop: 10, marginTop: 10 },
+  receiptTotalLabel: { color: '#111827', fontWeight: '600', fontSize: 14 },
+  receiptTotalValue: { color: '#002b1a', fontWeight: '700', fontSize: 16 },
+  primaryActionBtn: { width: '100%', backgroundColor: '#002b1a', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
+  primaryActionText: { color: '#ffffff', fontSize: 15, fontWeight: '600' },
+  modalOverlayScrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  modalCardContainer: { width: '100%', maxWidth: 500, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 24, paddingHorizontal: 20},
+  modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitleText: { fontSize: 20, fontWeight: '700', color: '#111827' },
+  modalDateSubtitle: { fontSize: 14, color: '#6b7280', marginTop: 4 },
+  closeModalButton: { padding: 6 },
+  closeModalButtonText: { fontSize: 18, color: '#6b7280' },
+  modalScrollableWindow: { maxHeight: 300, marginBottom: 12 },
+  modalEmptyStateBox: { paddingVertical: 40, alignItems: 'center' }
+});
