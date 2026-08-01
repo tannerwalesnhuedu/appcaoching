@@ -1,176 +1,83 @@
+// app/login.tsx
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
-import {
-  Alert,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  ActivityIndicator,
-} from "react-native";
-import { supabase } from "../lib/supabase/index";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [mfaRequired, setMfaRequired] = useState(false);
-  const [mfaCode, setMfaCode] = useState("");
-  const [factorId, setFactorId] = useState("");
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [token, setToken] = useState('');
+  const [isEmailSent, setIsEmailSent] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // SECURE AUTH TRACKER: Automatically checks if the returning user needs to pass a 2FA challenge
-  useEffect(() => {
-    const checkMfaStatus = async () => {
-      const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      
-      if (error) return;
-
-      // nextLevel contains 'totp' if they have an active 2FA device hooked up
-      if (data.nextLevel === 'totp' && data.currentLevel !== data.nextLevel) {
-        setMfaRequired(true);
-        
-        // Fetch their active authenticator factor ID automatically
-        const { data: factors } = await supabase.auth.mfa.listFactors();
-        const totpFactor = factors?.all?.find(f => f.factor_type === 'totp' && f.status === 'verified');
-        if (totpFactor) {
-          setFactorId(totpFactor.id);
-        }
-      } else if (data.currentLevel === 'totp' || (data.currentLevel === 'aal1' && data.nextLevel === 'aal1')) {
-        // Fully authenticated or no MFA set up yet -> proceed safely to bookings
-        router.replace("/bookings" as any);
-      }
-    };
-
-    // Watch auth status changes actively
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
-        checkMfaStatus();
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  async function handleLogin() {
-  if (!email) {
-    Alert.alert("Error", "Please enter your email address");
-    return;
-  }
-  setLoading(true);
-
-  // FIXED: Explicitly stringify the target URL parameter to prevent Expo build-step stripping
-  const targetRedirectUrl = "https://appcaoching.vercel.app";
-
- // Inside your login submission handler inside app/login.tsx
+  // Step A: Send the 6-Digit code to their inbox
+  const handleSendOTP = async () => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: email,
-      options: {
-        emailRedirectTo: targetRedirectUrl, // Use your string variable from line 63
-      },
-    });
-
-
-  
-  setLoading(false);
-  if (error) {
-    Alert.alert("Login Failed", error.message);
-  } else {
-    Alert.alert(
-      "Check your email! ✉️",
-      "We sent a secure Magic Login Link to your inbox. Click it to log in.",
-    );
-  }
-}
-
-
-
-
-  // STEP 2: Verify the 6-digit Authenticator App token code securely for free
-  async function handleVerify2FA() {
-    if (mfaCode.length !== 6) {
-      Alert.alert("Error", "Please enter a valid 6-digit verification code.");
-      return;
-    }
-    setLoading(true);
-
-    // Create an atomic server-side safety challenge verification request
-    const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId });
-
-    if (challengeError) {
-      Alert.alert("MFA Challenge Failed", challengeError.message);
-      setLoading(false);
-      return;
-    }
-
-    // Submit token values to confirm full session security authorization clearance
-    const { error: verifyError } = await supabase.auth.mfa.verify({
-      factorId,
-      challengeId: challengeData.id,
-      code: mfaCode.trim()
+      options: { shouldCreateUser: true } // Creates their account automatically if new
     });
 
     setLoading(false);
-
-    if (verifyError) {
-      Alert.alert("Verification Replaced", "Incorrect authenticator code. Try again.");
+    if (error) {
+      Alert.alert("Error", error.message);
     } else {
-      Alert.alert("Security Verified! 🔒", "Welcome back.");
-      router.replace("/bookings" as any);
+      setIsEmailSent(true); // Switch UI to the code verification screen
     }
-  }
+  };
 
-  // UI RENDER CONDITIONAL: Show the 2FA Code Input screen view if their account requires it
-  if (mfaRequired) {
+  // Step B: Submit code back to Supabase to establish session
+  const handleVerifyOTP = async () => {
+    setLoading(true);
+    const { data: { session }, error } = await supabase.auth.verifyOtp({
+      email: email,
+      token: token,
+      type: 'email' // Standard token verification parameter
+    });
+
+    setLoading(false);
+    if (error) {
+      Alert.alert("Verification Failed", error.message);
+    } else if (session) {
+      router.replace("/(tabs)" as any); // Redirects straight to home page dashboard
+    }
+  };
+
+  if (!isEmailSent) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Two-Factor Security</Text>
-        <Text style={styles.subtitle}>Open your Authenticator app and enter your 6-digit secure code code</Text>
-        
-        <TextInput 
-          style={styles.input} 
-          placeholder="000000" 
-          placeholderTextColor="#888" 
-          value={mfaCode} 
-          onChangeText={setMfaCode}
-          keyboardType="number-pad"
-          maxLength={6}
+      <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 15 }}>Sign In</Text>
+        <TextInput
+          style={{ borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 6, marginBottom: 15 }}
+          placeholder="Enter your email address"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
         />
-
-        <TouchableOpacity style={styles.button} onPress={handleVerify2FA} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? "Verifying..." : "Verify & Continue"}</Text>
+        <TouchableOpacity style={{ backgroundColor: '#002b1a', padding: 15, borderRadius: 6 }} onPress={handleSendOTP} disabled={loading}>
+          <Text style={{ color: 'white', textAlign: 'center' }}>{loading ? 'Sending...' : 'Send Verification Code'}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Client Portal</Text>
-      <Text style={styles.subtitle}>Enter your email to sign up or sign in instantly</Text>
+    <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
+      <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 5 }}>Enter Code</Text>
+      <p style={{ color: '#666', marginBottom: 15 }}>We sent a secure 6-digit confirmation code to {email}.</p>
       
-      <TextInput 
-        style={styles.input} 
-        placeholder="name@example.com" 
-        placeholderTextColor="#888" 
-        value={email} 
-        onChangeText={setEmail}
-        autoCapitalize="none" 
-        keyboardType="email-address" 
+      <TextInput
+        style={{ borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 6, marginBottom: 15, textAlign: 'center', fontSize: 20, letterSpacing: 5 }}
+        placeholder="123456"
+        value={token}
+        onChangeText={setToken}
+        keyboardType="number-pad"
+        maxLength={6}
       />
-
-      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? "Sending..." : "Send Magic Link"}</Text>
+      <TouchableOpacity style={{ backgroundColor: '#002b1a', padding: 15, borderRadius: 6 }} onPress={handleVerifyOTP} disabled={loading}>
+        <Text style={{ color: 'white', textAlign: 'center' }}>{loading ? 'Verifying...' : 'Verify & Log In'}</Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 28, fontWeight: "bold", marginBottom: 8, textAlign: "center" },
-  subtitle: { fontSize: 16, color: "#666", marginBottom: 24, textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 16, textAlign: 'center' },
-  button: { backgroundColor: "#007AFF", padding: 14, borderRadius: 8, alignItems: "center" },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-});
