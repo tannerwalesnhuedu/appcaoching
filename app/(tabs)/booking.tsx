@@ -172,27 +172,53 @@ export default function BookingScreen(): React.JSX.Element {
 
 
 
-  async function bookSession(slotId: string, date: string, time: string): Promise<void> { 
-    const { data: { user } } = await supabase.auth.getUser(); 
-    if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.'); 
-    
-    setSubmitting(true); 
-    
+    async function bookSession(slotId: string, date: string, time: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.');
+
+    // 💡 FRONTEND OVERLAP PROTECTION: Define session length (e.g., 60 minutes)
+    const sessionDurationMinutes = 60;
+    const requestedStart = new Date(`${date} ${time}`);
+    const requestedEnd = new Date(requestedStart.getTime() + sessionDurationMinutes * 60000);
+
+    // Scan your locally saved upcoming schedule rows for any confirmed overlaps
+    const hasOverlap = mySchedule.some((appointment) => {
+      try {
+        const existingStart = new Date(`${appointment.session_date} ${appointment.session_time}`);
+        const existingEnd = new Date(existingStart.getTime() + sessionDurationMinutes * 60000);
+        // Standard mathematical overlap boundary evaluation formula
+        return requestedStart < existingEnd && requestedEnd > existingStart;
+      } catch {
+        return false;
+      }
+    });
+
+    if (hasOverlap) {
+      Alert.alert(
+        'Scheduling Conflict',
+        'You already have an appointment scheduled that overlaps with this time window. Please pick a different slot.'
+      );
+      return;
+    }
+
+    setSubmitting(true);
+
     const { data: success, error } = await supabase.rpc('secure_reserve_appointment', {
       target_slot_id: slotId,
       target_user_id: user.id,
       target_user_email: user.email
     });
 
-    if (error || !success) { 
-      Alert.alert('Booking Conflict', 'This specific session window was just claimed by another browser thread.'); 
-    } else { 
+    if (error || !success) {
+      Alert.alert('Booking Conflict', 'This specific session window was just claimed by another client.');
+      setSubmitting(false);
+    } else {
       setConfirmedDetails({ id: slotId, session_date: date, session_time: time, is_booked: true });
-      setAllSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId)); 
-      setFilteredSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId)); 
-    } 
-    setSubmitting(false); 
-  } 
+      setAllSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId));
+      setFilteredSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId));
+      setSubmitting(false);
+    }
+  }
 
   // Replace lines 219-222 with this:
 async function handleSignOut(): Promise<void> {
