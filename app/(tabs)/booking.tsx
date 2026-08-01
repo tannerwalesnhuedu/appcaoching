@@ -14,7 +14,8 @@ import { Calendar } from 'react-native-calendars';
 import { useRouter } from "expo-router"; 
 import { supabase } from '../../lib/supabase/index'; 
 
-interface Appointment { 
+interface Appointment {
+  price: any; 
   id: string; 
   session_date: string; 
   session_time: string; 
@@ -186,7 +187,7 @@ useEffect(() => {
 
 
 
-    async function bookSession(slotId: string, date: string, time: string): Promise<void> {
+    async function bookSession(slotId: string, date: string, time: string, price: any): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.');
 
@@ -227,7 +228,7 @@ useEffect(() => {
       Alert.alert('Booking Conflict', 'This specific session window was just claimed by another client.');
       setSubmitting(false);
     } else {
-      setConfirmedDetails({ id: slotId, session_date: date, session_time: time, is_booked: true });
+      setConfirmedDetails({ id: slotId, session_date: date, session_time: time, is_booked: true, price: price });
       setAllSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId));
       setFilteredSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId));
       setSubmitting(false);
@@ -376,7 +377,9 @@ return (
         
         {/* 💵 NEW: Industry Standard Price Display */}
         <View style={styles.priceContainer}>
-          <Text style={styles.priceLabelText}>$150.00</Text>
+          <Text style={styles.priceLabelText}>
+            {item.price ? `$${item.price}.00` : '150.00'}
+          </Text>
         </View>
       </View>
 
@@ -391,7 +394,7 @@ return (
     return;
   }
 
-          bookSession(item.id, item.session_date, item.session_time);
+          bookSession(item.id, item.session_date, item.session_time, item.price);
           setSelectedDate(''); 
         }} 
       >
