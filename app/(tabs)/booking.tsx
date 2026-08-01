@@ -91,7 +91,7 @@ useEffect(() => {
     if (activeTab === 'book') {
       const { data, error } = await supabase 
         .from('appointments') 
-        .select('id, session_date, session_time, is_booked, user_id') 
+        .select('id, session_date, session_time, is_booked, user_id, price') 
         .order('session_time', { ascending: true }); 
 
       if (!isMounted) return; 
