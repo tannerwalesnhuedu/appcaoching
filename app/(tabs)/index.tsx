@@ -240,7 +240,7 @@ const handleUserSignOut = async (): Promise<void> => {
 
       <TouchableOpacity
         style={styles.cancelButton}
-       onPress={() => { alert("CLICK DETECTED!"); handleCancelAppointment(nextSession.id) }}
+      onPress={() => handleCancelAppointment(nextSession.id)} 
       >
         <Text style={styles.cancelButtonText}>Cancel Session</Text>
       </TouchableOpacity>
