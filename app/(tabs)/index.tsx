@@ -264,9 +264,11 @@ const handleCancelAppointment = async (slotId: string) => {
       </View>
 
       <Text style={styles.priceText}>
-  Price: {nextSession?.price !== undefined && nextSession?.price !== null 
-    ? `$${nextSession.price}.00` 
-    : `$${(nextSession as any)?.appointments?.price || '150.00'}`}
+  Price: ${
+    nextSession?.price 
+      ? nextSession.price 
+      : ((nextSession as any)?.appointments?.price || (nextSession as any)?.booking_price || '0.00')
+  }
 </Text>
 
 
