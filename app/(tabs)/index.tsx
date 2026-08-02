@@ -137,9 +137,9 @@ const handleCancelAppointment = async (slotId: string) => {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                target_slot_id: slotId,
-                target_user_id: user.id
-              }),
+              target_slot_id: slotId,
+              target_user_id: user?.id || nextSession?.id || nextSession?.user_id // Fallback chains
+}),
             });
 
             const result = await response.json();
@@ -176,6 +176,30 @@ const handleCancelAppointment = async (slotId: string) => {
         <Text style={styles.emailText}>{userEmail}</Text> 
       </View> 
 
+  return (
+    <View style={styles.container}>
+      {/* 🏛️ Centered content wrapper matching your layout limits */}
+      <View style={styles.centeredContentWrapper}>
+        
+        {/* Header Row */}
+        <View style={styles.headerRow}>
+          <Text style={styles.header}>Dashboard</Text>
+          
+          <TouchableOpacity 
+            style={styles.signOutButton}
+            onPress={handleUserSignOut}
+          >
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* The rest of your home page code cards go directly here... */}
+
+      </View>
+    </View>
+  );
+
+
       {/* Hero Card */} 
       <View style={styles.heroCard}> 
         <View style={styles.heroInfo}> 
@@ -192,20 +216,6 @@ const handleCancelAppointment = async (slotId: string) => {
           </View> 
         )} 
       </View> 
-
-      {/* 👤 Top Dashboard Header Navigation Row */}
-<View style={styles.headerRow}>
-  <Text style={styles.header}>Dashboard</Text>
-
-  {/* 👇 INTERACTIVE SIGN OUT TRIGGER 👇 */}
-  <TouchableOpacity 
-    style={styles.signOutButton}
-    onPress={handleUserSignOut}
-  >
-    <Text style={styles.signOutText}>Sign Out</Text>
-  </TouchableOpacity>
-</View>
-
 
       {/* Quick Metrics Status Panel */} 
       <View style={styles.metricsGrid}> 
@@ -241,10 +251,6 @@ const handleCancelAppointment = async (slotId: string) => {
                 <Text style={styles.primarySessionTime}>{nextSession.session_time}</Text> 
               </View> 
             </View> 
-            <View style={styles.sessionBadge}> 
-              <Text style={styles.sessionBadgeText}>Secured & Confirmed</Text> 
-            </View> 
-             {/* 👇 ADD THIS DYNAMIC PRICE ROW 👇 */}
   <Text style={styles.priceText}>
   Price: {nextSession && 'price' in nextSession && nextSession.price ? `$${nextSession.price}.00` : '$150.00'}
 </Text>
@@ -291,17 +297,56 @@ const handleCancelAppointment = async (slotId: string) => {
 } 
 
 const styles = StyleSheet.create({ 
-  container: { flex: 1, backgroundColor: '#f8fafc' }, 
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f9fafb', 
+    alignItems: 'center', 
+    justifyContent: 'flex-start', 
+    width: '100%' 
+  },
+ centeredContentWrapper: { 
+    width: '100%', 
+    maxWidth: 960, 
+    paddingHorizontal: 20, 
+    paddingTop: 24, 
+    flex: 1 
+  },
   contentContainer: { padding: 16 }, 
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', minHeight: 300 }, 
   loadingText: { marginTop: 12, color: '#64748b', fontSize: 14 }, 
   welcomeSection: { marginBottom: 20 }, 
   greetingText: { fontSize: 16, color: '#64748b' }, 
   emailText: { fontSize: 22, fontWeight: 'bold', color: '#1e293b' }, 
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  header: { fontSize: 28, fontWeight: 'bold', color: '#111' },
-  signOutButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' },
-  signOutText: { color: '#dc2626', fontWeight: '600', fontSize: 14 },
+ headerRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 20 
+  },
+  header: { 
+    fontSize: 28, 
+    fontWeight: 'bold', 
+    color: '#111' 
+  },
+  signOutButton: { 
+    paddingVertical: 6, 
+    paddingHorizontal: 12, 
+    borderRadius: 6, 
+    backgroundColor: '#fff', 
+    borderWidth: 1, 
+    borderColor: '#fca5a5' 
+  },
+  signOutText: { 
+    color: '#dc2626', 
+    fontWeight: '600', 
+    fontSize: 14 
+  },
+  priceText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#4b5563',
+    marginVertical: 4,
+  },
   heroCard: { backgroundColor: '#2b1a9e', padding: 20, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }, 
   heroInfo: { flex: 1, marginRight: 10 }, 
   heroTitle: { fontSize: 20, fontWeight: 'bold', color: '#ffffff', marginBottom: 6 }, 
@@ -330,12 +375,6 @@ const styles = StyleSheet.create({
   timelineNodeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2b1a9e' },
   timelineDateText: { fontSize: 13, fontWeight: '600', color: '#334155' },
   timelineTimeText: { fontSize: 13, fontWeight: '600', color: '#334155' }, 
-  priceText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#4b5563', // A professional muted dark gray
-    marginVertical: 4,
-  },
   badgeContainer: {
     paddingVertical: 4,
     paddingHorizontal: 8,
