@@ -237,7 +237,6 @@ useEffect(() => {
     }
   }
 
-  // Replace lines 219-222 with this:
 async function handleSignOut(): Promise<void> {
   try {
     await supabase.auth.signOut();
@@ -247,7 +246,6 @@ async function handleSignOut(): Promise<void> {
     console.error("Error signing out:", error);
   }
 }
-
 
   if (checkingAuth || loading) { 
     return ( 

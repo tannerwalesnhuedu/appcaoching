@@ -100,6 +100,16 @@ if (!isMounted || loading) {
   return <></>; // This fixes the TypeScript error safely
 }
 
+async function handleSignOut(): Promise<void> {
+  try {
+    await supabase.auth.signOut();
+    // 💡 INDUSTRY STANDARD: Push the user completely out to the login checkpoint screen
+    router.replace("/login" as any);
+  } catch (error) {
+    console.error("Error signing out:", error);
+  }
+}
+
 const handleCancelAppointment = async (slotId: string) => {
   if (!user?.id) return;
 
@@ -156,6 +166,10 @@ const handleCancelAppointment = async (slotId: string) => {
         <Text style={styles.greetingText}>Welcome Back,</Text> 
         <Text style={styles.emailText}>{userEmail}</Text> 
       </View> 
+
+<TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
 
       {/* Hero Card */} 
       <View style={styles.heroCard}> 
@@ -263,6 +277,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', minHeight: 300 }, 
   loadingText: { marginTop: 12, color: '#64748b', fontSize: 14 }, 
   welcomeSection: { marginBottom: 20 }, 
+   signOutButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' },
+  signOutText: { color: '#dc2626', fontWeight: '600', fontSize: 14 },
   greetingText: { fontSize: 16, color: '#64748b' }, 
   emailText: { fontSize: 22, fontWeight: 'bold', color: '#1e293b' }, 
   heroCard: { backgroundColor: '#2b1a9e', padding: 20, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }, 
