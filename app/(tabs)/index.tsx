@@ -110,6 +110,7 @@ async function handleSignOut(): Promise<void> {
   }
 }
 
+
 const handleCancelAppointment = async (slotId: string) => {
   if (!user?.id) return;
 
@@ -167,10 +168,6 @@ const handleCancelAppointment = async (slotId: string) => {
         <Text style={styles.emailText}>{userEmail}</Text> 
       </View> 
 
-<TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
-
       {/* Hero Card */} 
       <View style={styles.heroCard}> 
         <View style={styles.heroInfo}> 
@@ -207,51 +204,46 @@ const handleCancelAppointment = async (slotId: string) => {
       </View> 
 
       {/* Next Appointment Block */} 
-{nextSession ? (
-  <View style={styles.primarySessionCard}>
-    <View style={styles.sessionAccentBar} />
-    
-    <View style={styles.sessionDetails}>
-      <View style={styles.sessionDateTimeRow}>
-        <View style={styles.inlineIconText}>
-          <Ionicons name="calendar-sharp" size={16} color="#2b1a9e" />
-          <Text style={styles.primarySessionDate}>{nextSession.session_date}</Text>
-        </View>
-        
-        <View style={styles.inlineIconText}>
-          <Ionicons name="time-sharp" size={16} color="#2b1a9e" />
-          <Text style={styles.primarySessionTime}>{nextSession.session_time}</Text>
-        </View>
-      </View>
-
-      {/* 🏷️ Dynamic Price Row */}
-      <Text style={styles.priceText}>
-        Price: {nextSession.price ? `$${nextSession.price}.00` : '$150.00'}
-      </Text>
-
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-        {/* Secured Status Badge */}
-        <View style={styles.sessionBadge}>
-          <Text style={styles.sessionBadgeText}>Secured & Confirmed</Text>
-        </View>
-
-        {/* 🛑 Interactive Client Cancel Trigger */}
-        <TouchableOpacity 
-          style={styles.cancelButton}
-          onPress={() => nextSession?.id && handleCancelAppointment(nextSession.id)}
-        >
-          <Text style={styles.cancelButtonText}>Cancel Session</Text>
-        </TouchableOpacity>
-      </View>
-
-    </View>
+      <Text style={styles.sectionHeading}>Your Next Appointment</Text> 
+      {nextSession ? ( 
+        <View style={styles.primarySessionCard}> 
+          <View style={styles.sessionAccentBar} /> 
+          <View style={styles.sessionDetails}> 
+            <View style={styles.sessionDateTimeRow}> 
+              <View style={styles.inlineIconText}> 
+                <Ionicons name="calendar-sharp" size={16} color="#2b1a9e" /> 
+                <Text style={styles.primarySessionDate}>{nextSession.session_date}</Text> 
+              </View> 
+              <View style={styles.inlineIconText}> 
+                <Ionicons name="time-sharp" size={16} color="#2b1a9e" /> 
+                <Text style={styles.primarySessionTime}>{nextSession.session_time}</Text> 
+              </View> 
+            </View> 
+            <View style={styles.sessionBadge}> 
+              <Text style={styles.sessionBadgeText}>Secured & Confirmed</Text> 
+            </View> 
+             {/* 👇 ADD THIS DYNAMIC PRICE ROW 👇 */}
+  <Text style={styles.priceText}>
+  Price: {nextSession && 'price' in nextSession && nextSession.price ? `$${nextSession.price}.00` : '$150.00'}
+</Text>
+  <View style={styles.badgeContainer}>
+    <Text style={styles.securedBadgeText}>Secured & Confirmed</Text>
   </View>
-) : (
-  <View style={styles.emptySessionCard}>
-    <Ionicons name="calendar-outline" size={32} color="#94a3b8" />
-    <Text style={styles.emptySessionText}>No upcoming coaching sessions locked into production pipelines.</Text>
-  </View>
-)}
+   <TouchableOpacity 
+    style={styles.cancelButton}
+    onPress={() => handleCancelAppointment(nextSession.id)}
+  >
+    <Text style={styles.cancelButtonText}>Cancel Session</Text>
+  </TouchableOpacity>
+          </View> 
+        </View> 
+      ) : ( 
+        <View style={styles.emptySessionCard}> 
+          <Ionicons name="calendar-outline" size={32} color="#94a3b8" /> 
+          <Text style={styles.emptySessionText}>No upcoming coaching sessions locked into production pipelines.</Text> 
+        </View> 
+      )} 
+
       {/* Remaining Timeline */} 
       {upcomingSessions.length > 1 && ( 
         <View style={{ marginTop: 12 }}> 
@@ -282,8 +274,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', minHeight: 300 }, 
   loadingText: { marginTop: 12, color: '#64748b', fontSize: 14 }, 
   welcomeSection: { marginBottom: 20 }, 
-   signOutButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' },
-  signOutText: { color: '#dc2626', fontWeight: '600', fontSize: 14 },
   greetingText: { fontSize: 16, color: '#64748b' }, 
   emailText: { fontSize: 22, fontWeight: 'bold', color: '#1e293b' }, 
   heroCard: { backgroundColor: '#2b1a9e', padding: 20, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }, 
