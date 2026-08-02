@@ -138,8 +138,8 @@ const handleCancelAppointment = async (slotId: string) => {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
               target_slot_id: slotId,
-              target_user_id: user?.id || nextSession?.id || nextSession?.user_id // Fallback chains
-}),
+              target_user_id: user?.id || nextSession?.user_id // 🛡️ Stripped out the incorrect slot id fallback string block
+          }),
             });
 
             const result = await response.json();
