@@ -21,8 +21,8 @@ export default function HomeScreen(): React.JSX.Element {
   const [loading, setLoading] = useState<boolean>(true); 
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const router = useRouter(); 
-
-
+  const [user, setUser] = useState<any>(null);
+  
     // Real-time Auth listener handling both client mounting and session tracking
   useEffect(() => {
     setIsMounted(true);
@@ -46,7 +46,6 @@ export default function HomeScreen(): React.JSX.Element {
       subscription.unsubscribe();
     };
   }, []);
-
 
   // 2. CORE DATABASE CALL IMPLEMENTATION
    const fetchUserAppointments = async (userId: string, showLoading = false) => {
@@ -100,7 +99,52 @@ export default function HomeScreen(): React.JSX.Element {
 if (!isMounted || loading) {
   return <></>; // This fixes the TypeScript error safely
 }
-  
+
+const handleCancelAppointment = async (slotId: string) => {
+  if (!user?.id) return;
+
+  // Confirm user intent before processing changes
+  Alert.alert(
+    "Cancel Appointment",
+    "Are you sure you want to cancel this coaching session?",
+    [
+      { text: "Keep Appointment", style: "cancel" },
+      {
+        text: "Yes, Cancel",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const response = await fetch('https://vercel.app', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                target_slot_id: slotId,
+                target_user_id: user.id
+              }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+              // This catches your backend 429 spam lock or the 24-hour block rules
+              throw new Error(result.error || 'Server error during cancellation.');
+            }
+
+            Alert.alert("Success", "Your appointment has been successfully canceled.");
+            
+            // 🔄 Call your screen's data refetch function to refresh the home state layout
+            if (typeof fetchUserAppointments === 'function') fetchUserAppointments(user.id, true);
+
+          } catch (err: any) {
+            Alert.alert("Cancellation Denied", err.message || "Could not complete operation.");
+          }
+        }
+      }
+    ]
+  );
+};
+
+
   // 6. UI COMPONENT LAYOUT GENERATION
   return ( 
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}> 
@@ -171,6 +215,12 @@ if (!isMounted || loading) {
   <View style={styles.badgeContainer}>
     <Text style={styles.securedBadgeText}>Secured & Confirmed</Text>
   </View>
+   <TouchableOpacity 
+    style={styles.cancelButton}
+    onPress={() => handleCancelAppointment(nextSession.id)}
+  >
+    <Text style={styles.cancelButtonText}>Cancel Session</Text>
+  </TouchableOpacity>
           </View> 
         </View> 
       ) : ( 
@@ -258,5 +308,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
     color: '#0369a1', // Solid dark theme blue text
+  },
+
+  cancelButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: '#fee2e2', // Light, professional soft pastel red hue
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#b91c1c', // Muted dark red alert color matching the border lines
   },
 });
