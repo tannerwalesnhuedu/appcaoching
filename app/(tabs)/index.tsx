@@ -144,22 +144,25 @@ const handleCancelAppointment = async (slotId: string) => {
 
             const result = await response.json();
 
-            if (!response.ok) {
-              // This catches your backend 429 spam lock or the 24-hour block rules
-              throw new Error(result.error || 'Server error during cancellation.');
-            }
+         if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Cancellation rejected by backend security filters.');
+        }
 
-            Alert.alert("Success", "Your appointment has been successfully canceled.");
-            
-            // 🔄 Call your screen's data refetch function to refresh the home state layout
-            if (typeof fetchUserAppointments === 'function' && user?.id) {
-        fetchUserAppointments(user.id, true);
-}
+        // 🔄 Success Execution Path
+        if (nextSession?.id === slotId) {
+          setUpcomingSessions([]);
+        }
 
+        if (typeof fetchUserAppointments === 'function' && (user?.id || nextSession?.user_id)) {
+          fetchUserAppointments(user?.id || nextSession?.user_id, true); // Pulls fresh available slot matrices
+        }
 
-          } catch (err: any) {
-            Alert.alert("Cancellation Denied", err.message || "Could not complete operation.");
-          }
+        Alert.alert("Success", "Your appointment has been successfully removed.");
+
+      } catch (err: any) {
+        Alert.alert("Cancellation Denied", err.message || "Could not complete operation.");
+      }
         }
       }
     ]
