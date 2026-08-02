@@ -129,7 +129,9 @@ const handleCancelAppointment = async (slotId: string) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ slotId })
+                body: JSON.stringify({ target_slot_id: slotId, // 👈 Change key to match backend expectations
+                    target_user_id: user?.id || "" 
+                })
             });
 
             const result = await response.json();
