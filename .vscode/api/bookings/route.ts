@@ -56,31 +56,31 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
+        // 1. Destructure the exact slot ID key sent from your frontend
         const { target_slot_id } = await request.json();
 
         if (!target_slot_id) {
-            return new Response(JSON.stringify({ error: "Missing slot ID" }), { status: 400 });
+            return new Response(JSON.stringify({ error: "Missing slot identification key" }), { status: 400 });
         }
 
-        // 💥 FORCE THE UPDATE DIRECTLY HERE
+        // 💥 THE CORE DATABASE FIX: Clear out the booking fields
         const { error: updateError } = await supabase
-            .from('appointments') // 🚨 Double-check if your table name is 'appointments' or 'bookings'
+            .from('appointments') // Matches your table name exactly
             .update({
-                is_booked: false,
-                user_id: null,
-                client_email: null
+                is_booked: false,       // Changes TRUE back to FALSE
+                client_email: null,     // Wipes out the email string
+                user_id: null          // Wipes out the uuid relationship key
             })
-            .eq('id', target_slot_id);
+            .eq('id', target_slot_id); // Finds the matching row UUID
 
         if (updateError) {
-            console.error("Supabase error:", updateError);
+            console.error("Supabase clear error:", updateError);
             return new Response(JSON.stringify({ error: updateError.message }), { status: 500 });
         }
 
-        return new Response(JSON.stringify({ success: true }), { status: 200 });
+        return new Response(JSON.stringify({ success: true, message: "Slot released back to matrix" }), { status: 200 });
 
     } catch (error: any) {
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 }
-
