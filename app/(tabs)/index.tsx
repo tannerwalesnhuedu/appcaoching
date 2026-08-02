@@ -264,8 +264,12 @@ const handleCancelAppointment = async (slotId: string) => {
       </View>
 
       <Text style={styles.priceText}>
-        Price: {nextSession.price ? `$${nextSession.price}.00` : '$150.00'}
-      </Text>
+  Price: {nextSession?.price !== undefined && nextSession?.price !== null 
+    ? `$${nextSession.price}.00` 
+    : `$${(nextSession as any)?.appointments?.price || '150.00'}`}
+</Text>
+
+
 
       <View style={styles.badgeContainer}>
         <Text style={styles.securedBadgeText}>Secured & Confirmed</Text>
