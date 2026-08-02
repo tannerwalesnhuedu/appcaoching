@@ -114,7 +114,7 @@ const handleCancelAppointment = async (slotId: string) => {
         style: "destructive",
         onPress: async () => {
           try {
-            const response = await fetch('https://appcaoching.vercel.app/cancel-appointment', {
+            const response = await fetch('https://appcaoching.vercel.app/booking', {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
