@@ -100,6 +100,25 @@ if (!isMounted || loading) {
   return <></>; // This fixes the TypeScript error safely
 }
 
+const handleUserSignOut = async (): Promise<void> => {
+  try {
+    // 1. Terminate the active authentication token instance inside Supabase securely
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) throw error;
+
+    // 2. Clear out any local component state if necessary
+    if (typeof setUser === 'function') setUser(null);
+
+    // 3. Clear browser/client route state context and push them cleanly back to the authentication page
+    router.replace('/login' as any);
+
+  } catch (err: any) {
+    console.error("Sign-out process structural anomaly:", err.message);
+  }
+};
+
+
 const handleCancelAppointment = async (slotId: string) => {
   if (!user?.id) return;
 
