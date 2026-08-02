@@ -118,52 +118,35 @@ const handleUserSignOut = async (): Promise<void> => {
   }
 };
 
-  const handleCancelAppointment = async (slotId: string) => {
-    if (!user?.id || !nextSession) return;
+    const handleCancelAppointment = async (slotId: string) => {
+    if (!user?.id || !upcomingSessions.length) return;
 
-    // Define the core action to run when cancellation is confirmed
-    const processCancellation = async () => {
-      try {
-        const response = await fetch('/api/bookings', { 
-          method: 'PUT', 
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            target_user_id: user.id,
-  target_date: nextSession.session_date, // Enters '2026-08-06'
-  target_time: nextSession.session_time  // Enters '12:00 AM'
-          })
-        });
+    // Find the current session being canceled from your array list
+    const targetSession = upcomingSessions.find((s) => s.id === slotId);
+    if (!targetSession) return;
 
-        if (!response.ok) {
-          throw new Error('Failed to cancel appointment');
-        }
+    try {
+      // 1. Call your brand new Supabase RPC database function
+      const { error } = await supabase.rpc('secure_cancel_appointment', {
+        target_date: targetSession.session_date,
+        target_time: targetSession.session_time,
+        target_user_id: user.id
+      });
 
-        const result = await response.json(); 
-
-        // Dynamically filter out the canceled session so it instantly disappears from the UI
-        setUpcomingSessions((prev) => prev.filter((session) => session.id !== slotId));
-
-      } catch (error) {
-        console.error("Cancellation error:", error);
+      if (error) {
+        alert(`Cancellation failed: ${error.message}`);
+        return;
       }
-    };
 
-    // 🌐 Web Environment Path
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm("Are you sure you want to cancel this coaching session?");
-      if (confirmed) {
-        await processCancellation();
-      }
-    } 
-    // 📱 Mobile App Path
-    else {
-      // You can add an Alert.alert here later for mobile confirmations!
-      await processCancellation();
+      alert("Appointment successfully canceled!");
+
+      // 2. Clear out the array list hook. This automatically updates your homepage UI!
+      setUpcomingSessions((prev) => prev.filter((session) => session.id !== slotId));
+
+    } catch (err) {
+      console.error("Cancellation error:", err);
     }
   };
-
 
 
   // 6. UI COMPONENT LAYOUT GENERATION
