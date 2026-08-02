@@ -300,7 +300,7 @@ return (
     <View style={styles.centeredContentWrapper}>
       
       <View style={styles.headerRow}>
-        <Text style={styles.header}>Dashboard</Text>
+        <Text style={styles.header}>Booking</Text>
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
