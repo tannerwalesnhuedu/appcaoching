@@ -45,13 +45,11 @@ export default function BookingScreen(): React.JSX.Element {
   // Add this near your other useState hooks at the top of the component
   const [user, setUser] = useState<any>(null);
 
-// Place this right underneath your useState hooks inside booking.tsx:
-useFocusEffect(
-  useCallback(() => {
-    // 💡 Add the function you use to fetch appointments from Supabase here
-    // Example: fetchAvailableAppointments();
-  }, [])
-);
+  useFocusEffect(
+    useCallback(() => {
+      fetchData(true);
+    }, [activeTab])
+  );
 
 
    // Hook 1: Handle User Authentication and Routing (Runs once on mount)
