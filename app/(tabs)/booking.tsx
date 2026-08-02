@@ -396,8 +396,9 @@ return (
     return;
   }
 
-          bookSession(item.id, item.session_date, item.session_time, item.price);
-          setSelectedDate(''); 
+           // 2. Clear booking function execution
+    bookSession(item.id, item.session_date, item.session_time, Number(item.price));
+    setSelectedDate('');
         }} 
       >
         <Text style={styles.bookButtonText}>Reserve</Text>
