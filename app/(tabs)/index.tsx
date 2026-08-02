@@ -129,52 +129,40 @@ const handleCancelAppointment = async (slotId: string) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ target_slot_id: slotId, // 👈 Change key to match backend expectations
-                    target_user_id: user?.id || "" 
+                body: JSON.stringify({ 
+                  target_slot_id: slotId, 
+                  target_user_id: user?.id || "" 
                 })
             });
 
-            const result = await response.json();
+                   // Read response body
+        const result = await response.json();
 
-            // 1. Show confirmation to the user
-            alert("Success! Your appointment has been canceled and released back to the calendar.");
-            
-            // 2. Clear out local state immediately to force the UI to remove the card
-            if (typeof setUpcomingSessions === 'function') {
-                setUpcomingSessions([]); // Clear current viewing list
-            }
-            
-            // 3. Re-fetch clean data from database
-            if (typeof fetchUserAppointments === 'function') {
-                fetchUserAppointments(user?.id || "", true); 
-            } else {
-                // Fail-safe: hard refresh the browser window to guarantee UI matches database
-                window.location.reload();
-            }
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to cancel appointment');
-            }
-
-            // Web-friendly success feedback
-            if (Platform.OS === 'web') {
-                alert("Your appointment has been successfully removed.");
-            } else {
-                Alert.alert("Success", "Your appointment has been successfully removed.");
-            }
-            
-            if (typeof fetchUserAppointments === 'function') {
-                fetchUserAppointments(user?.id, true);
-            }
-
-        } catch (error: any) {
-            if (Platform.OS === 'web') {
-                alert(error.message || "Could not complete operation.");
-            } else {
-                Alert.alert("Error", error.message || "Could not complete operation.");
-            }
+        // 🚨 1. GUARD FIRST: Verify if the network call actually succeeded
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to cancel appointment');
         }
-    };
+
+        // 🎉 2. SUCCESS PATH
+        alert("Success! Your appointment has been canceled and released back to the calendar.");
+        
+        // Clear out local state immediately to force the UI to remove the card
+        if (typeof setUpcomingSessions === 'function') {
+            setUpcomingSessions([] as Appointment[]); 
+        }
+        
+        // Re-fetch clean data arrays from database to sync up the view
+        if (typeof fetchUserAppointments === 'function') {
+            fetchUserAppointments(user?.id || "", true); 
+        } else {
+            window.location.reload();
+        }
+
+    } catch (error: any) {
+        console.error("Cancellation execution failed:", error);
+        alert(error.message || "An unexpected error occurred while clearing your booking.");
+    }
+};
 
     // 🌐 Web Environment Path
     if (Platform.OS === 'web') {
