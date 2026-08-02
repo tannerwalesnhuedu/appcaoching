@@ -240,39 +240,45 @@ const handleCancelAppointment = async (slotId: string) => {
 
       {/* Next Appointment Block */} 
       <Text style={styles.sectionHeading}>Your Next Appointment</Text> 
-      {nextSession ? ( 
-        <View style={styles.primarySessionCard}> 
-          <View style={styles.sessionAccentBar} /> 
-          <View style={styles.sessionDetails}> 
-            <View style={styles.sessionDateTimeRow}> 
-              <View style={styles.inlineIconText}> 
-                <Ionicons name="calendar-sharp" size={16} color="#2b1a9e" /> 
-                <Text style={styles.primarySessionDate}>{nextSession.session_date}</Text> 
-              </View> 
-              <View style={styles.inlineIconText}> 
-                <Ionicons name="time-sharp" size={16} color="#2b1a9e" /> 
-                <Text style={styles.primarySessionTime}>{nextSession.session_time}</Text> 
-              </View> 
-            </View> 
-  <Text style={styles.priceText}>
-  Price: {nextSession && 'price' in nextSession && nextSession.price ? `$${nextSession.price}.00` : '$150.00'}
-</Text>
-  <View style={styles.badgeContainer}>
-    <Text style={styles.securedBadgeText}>Secured & Confirmed</Text>
+     {nextSession ? (
+  <View style={styles.primarySessionCard}>
+    <View style={styles.sessionAccentBar} />
+    
+    <View style={styles.sessionDetails}>
+      <View style={styles.sessionDateTimeRow}>
+        <View style={styles.inlineIconText}>
+          <Ionicons name="calendar-sharp" size={16} color="#2b1a9e" />
+          <Text style={styles.primarySessionDate}>{nextSession.session_date}</Text>
+        </View>
+        
+        <View style={styles.inlineIconText}>
+          <Ionicons name="time-sharp" size={16} color="#2b1a9e" />
+          <Text style={styles.primarySessionTime}>{nextSession.session_time}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.priceText}>
+        Price: {nextSession.price ? `$${nextSession.price}.00` : '$150.00'}
+      </Text>
+
+      <View style={styles.badgeContainer}>
+        <Text style={styles.securedBadgeText}>Secured & Confirmed</Text>
+      </View>
+
+      <TouchableOpacity
+        style={styles.cancelButton}
+        onPress={() => handleCancelAppointment(nextSession.id)}
+      >
+        <Text style={styles.cancelButtonText}>Cancel Session</Text>
+      </TouchableOpacity>
+    </View>
   </View>
-   <TouchableOpacity 
-    style={styles.cancelButton}
-    onPress={() => handleCancelAppointment(nextSession.id)}>
-    <Text style={styles.cancelButtonText}>Cancel Session</Text>
-  </TouchableOpacity>
-          </View> 
-        </View> 
-      ) : ( 
-        <View style={styles.emptySessionCard}> 
-          <Ionicons name="calendar-outline" size={32} color="#94a3b8" /> 
-          <Text style={styles.emptySessionText}>No upcoming coaching sessions locked into production pipelines.</Text> 
-        </View> 
-      )} 
+) : (
+  <View style={styles.emptySessionCard}>
+    <Ionicons name="calendar-outline" size={32} color="#94a3b8" />
+    <Text style={styles.emptySessionText}>No upcoming coaching sessions locked into production pipelines.</Text>
+  </View>
+)};
 
       {/* Remaining Timeline */} 
       {upcomingSessions.length > 1 && ( 
