@@ -118,50 +118,65 @@ const handleUserSignOut = async (): Promise<void> => {
   }
 };
 
-
 const handleCancelAppointment = async (slotId: string) => {
     if (!user?.id) return;
 
-    // Confirm user intent before processing changes
-    Alert.alert(
-        "Cancel Appointment",
-        "Are you sure you want to cancel this coaching session?",
-        [
-            { text: "Keep Appointment", style: "cancel" },
-            {
-                text: "Yes, Cancel",
-                style: "destructive",
-                onPress: async () => {
-                    try {
-                        const response = await fetch('https://appcaoching.vercel.app/', {
-                            method: 'DELETE',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ slotId })
-                        });
+    // Define the core action to run when cancellation is confirmed
+    const executeCancellation = async () => {
+        try {
+            const response = await fetch('https://vercel.app', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ slotId })
+            });
 
-                        const result = await response.json();
+            const result = await response.json();
 
-                        if (!response.ok) {
-                            throw new Error(result.error || 'Failed to cancel appointment');
-                        }
-
-                        Alert.alert("Success", "Your appointment has been successfully removed.");
-                        
-                        if (typeof fetchUserAppointments === 'function') {
-                            fetchUserAppointments(user?.id, true);
-                        }
-
-                    } catch (error: any) {
-                        Alert.alert("Error", error.message || "Could not complete operation.");
-                    }
-                }
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to cancel appointment');
             }
-        ]
-    );
-};
 
+            // Web-friendly success feedback
+            if (Platform.OS === 'web') {
+                alert("Your appointment has been successfully removed.");
+            } else {
+                Alert.alert("Success", "Your appointment has been successfully removed.");
+            }
+            
+            if (typeof fetchUserAppointments === 'function') {
+                fetchUserAppointments(user?.id, true);
+            }
+
+        } catch (error: any) {
+            if (Platform.OS === 'web') {
+                alert(error.message || "Could not complete operation.");
+            } else {
+                Alert.alert("Error", error.message || "Could not complete operation.");
+            }
+        }
+    };
+
+    // 🌐 Web Environment Path
+    if (Platform.OS === 'web') {
+        const confirmed = window.confirm("Are you sure you want to cancel this coaching session?");
+        if (confirmed) {
+            executeCancellation();
+        }
+    } 
+    // 📱 Mobile App Path
+    else {
+        Alert.alert(
+            "Cancel Appointment",
+            "Are you sure you want to cancel this coaching session?",
+            [
+                { text: "Keep Appointment", style: "cancel" },
+                { text: "Yes, Cancel", style: "destructive", onPress: executeCancellation }
+            ]
+        );
+    }
+};
 
 
   // 6. UI COMPONENT LAYOUT GENERATION
