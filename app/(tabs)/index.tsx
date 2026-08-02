@@ -267,7 +267,8 @@ const handleCancelAppointment = async (slotId: string) => {
 
       <TouchableOpacity
         style={styles.cancelButton}
-        onPress={() => handleCancelAppointment(nextSession.id)}
+       onPress={() => { alert("CLICK DETECTED!"); handleCancelAppointment(nextSession.id); }}
+
       >
         <Text style={styles.cancelButtonText}>Cancel Session</Text>
       </TouchableOpacity>
