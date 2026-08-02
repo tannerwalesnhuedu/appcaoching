@@ -13,6 +13,8 @@ import {
 import { Calendar } from 'react-native-calendars'; 
 import { useRouter } from "expo-router"; 
 import { supabase } from '../../lib/supabase/index'; 
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
 interface Appointment {
   price: any; 
@@ -43,6 +45,14 @@ export default function BookingScreen(): React.JSX.Element {
   // Add this near your other useState hooks at the top of the component
   const [user, setUser] = useState<any>(null);
 
+// Place this right underneath your useState hooks inside booking.tsx:
+useFocusEffect(
+  useCallback(() => {
+    // 💡 Add the function you use to fetch appointments from Supabase here
+    // Example: fetchAvailableAppointments();
+  }, [])
+);
+
 
    // Hook 1: Handle User Authentication and Routing (Runs once on mount)
   useEffect(() => {
@@ -59,6 +69,7 @@ export default function BookingScreen(): React.JSX.Element {
 
     return () => { isMounted = false; };
   }, []); // Empty array means this only runs once when the page loads
+
 
   // Hook 2: Handle Database Fetching (Runs every time the active tab changes!)
   useEffect(() => {
