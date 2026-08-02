@@ -176,7 +176,6 @@ const handleCancelAppointment = async (slotId: string) => {
         <Text style={styles.emailText}>{userEmail}</Text> 
       </View> 
     <View style={styles.container}>
-      {/* 🏛️ Centered content wrapper matching your layout limits */}
       <View style={styles.centeredContentWrapper}>
         
         {/* Header Row */}
@@ -192,9 +191,6 @@ const handleCancelAppointment = async (slotId: string) => {
         </View>
       </View>
     </View>
-  );
-
-
       {/* Hero Card */} 
       <View style={styles.heroCard}> 
         <View style={styles.heroInfo}> 
