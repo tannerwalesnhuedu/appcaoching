@@ -163,6 +163,13 @@ if (!isMounted || loading) {
             <View style={styles.sessionBadge}> 
               <Text style={styles.sessionBadgeText}>Secured & Confirmed</Text> 
             </View> 
+             {/* 👇 ADD THIS DYNAMIC PRICE ROW 👇 */}
+  <Text style={styles.priceText}>
+  Price: {nextSession && 'price' in nextSession && nextSession.price ? `$${nextSession.price}.00` : '$150.00'}
+</Text>
+  <View style={styles.badgeContainer}>
+    <Text style={styles.securedBadgeText}>Secured & Confirmed</Text>
+  </View>
           </View> 
         </View> 
       ) : ( 
@@ -232,4 +239,23 @@ const styles = StyleSheet.create({
   timelineNodeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2b1a9e' },
   timelineDateText: { fontSize: 13, fontWeight: '600', color: '#334155' },
   timelineTimeText: { fontSize: 13, fontWeight: '600', color: '#334155' }, 
-})
+  priceText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#4b5563', // A professional muted dark gray
+    marginVertical: 4,
+  },
+  badgeContainer: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: '#e0f2fe', // Soft theme blue background
+    alignSelf: 'flex-start',
+    marginTop: 6,
+  },
+  securedBadgeText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#0369a1', // Solid dark theme blue text
+  },
+});
