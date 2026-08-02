@@ -223,8 +223,8 @@ useEffect(() => {
       target_user_id: user.id,
       target_user_email: user.email,
       price: price
-    })
-    .eq('id', slotId);
+    });
+    
 
     if (error || !success) {
       Alert.alert('Booking Conflict', 'This specific session window was just claimed by another client.');
