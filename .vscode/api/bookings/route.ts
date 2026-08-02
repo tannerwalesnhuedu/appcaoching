@@ -54,33 +54,27 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
-    try {
-        // 1. Destructure the exact slot ID key sent from your frontend
-        const { target_slot_id } = await request.json();
+export async function PUT(request: Request) {
+  try {
+    const { target_slot_id, target_user_id } = await request.json();
 
-        if (!target_slot_id) {
-            return new Response(JSON.stringify({ error: "Missing slot identification key" }), { status: 400 });
-        }
+    const { data, error } = await supabase
+      .from('bookings') // Replace 'bookings' with your actual Supabase table name if different
+      .update({
+        is_booked: false,
+        client_email: null,
+        user_id: null
+      })
+      .eq('id', target_slot_id)
+      .eq('user_id', target_user_id);
 
-        // 💥 THE CORE DATABASE FIX: Clear out the booking fields
-        const { error: updateError } = await supabase
-            .from('appointments') // Matches your table name exactly
-            .update({
-                is_booked: false,       // Changes TRUE back to FALSE
-                client_email: null,     // Wipes out the email string
-                user_id: null          // Wipes out the uuid relationship key
-            })
-            .eq('id', target_slot_id); // Finds the matching row UUID
-
-        if (updateError) {
-            console.error("Supabase clear error:", updateError);
-            return new Response(JSON.stringify({ error: updateError.message }), { status: 500 });
-        }
-
-        return new Response(JSON.stringify({ success: true, message: "Slot released back to matrix" }), { status: 200 });
-
-    } catch (error: any) {
-        return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
+
+    return NextResponse.json({ success: true, data }, { status: 200 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }
+

@@ -118,71 +118,51 @@ const handleUserSignOut = async (): Promise<void> => {
   }
 };
 
-const handleCancelAppointment = async (slotId: string) => {
+  const handleCancelAppointment = async (slotId: string) => {
     if (!user?.id) return;
 
     // Define the core action to run when cancellation is confirmed
-    const executeCancellation = async () => {
-        try {
-            const response = await fetch('/api/bookings', {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                  target_slot_id: slotId, 
-                  target_user_id: user?.id || "" 
-                })
-            });
+    const processCancellation = async () => {
+      try {
+        const response = await fetch('/api/bookings', { 
+          method: 'PUT', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            target_slot_id: slotId,
+            target_user_id: user.id
+          })
+        });
 
-                   // Read response body
-        const result = await response.json();
-
-        // 🚨 1. GUARD FIRST: Verify if the network call actually succeeded
         if (!response.ok) {
-            throw new Error(result.error || 'Failed to cancel appointment');
+          throw new Error('Failed to cancel appointment');
         }
 
-        // 🎉 2. SUCCESS PATH
-        alert("Success! Your appointment has been canceled and released back to the calendar.");
-        
-        // Clear out local state immediately to force the UI to remove the card
-        if (typeof setUpcomingSessions === 'function') {
-            setUpcomingSessions([] as Appointment[]); 
-        }
-        
-        // Re-fetch clean data arrays from database to sync up the view
-        if (typeof fetchUserAppointments === 'function') {
-            fetchUserAppointments(user?.id || "", true); 
-        } else {
-            window.location.reload();
-        }
+        const result = await response.json(); 
 
-    } catch (error: any) {
-        console.error("Cancellation execution failed:", error);
-        alert(error.message || "An unexpected error occurred while clearing your booking.");
-    }
-};
+        // Dynamically filter out the canceled session so it instantly disappears from the UI
+        setUpcomingSessions((prev) => prev.filter((session) => session.id !== slotId));
+
+      } catch (error) {
+        console.error("Cancellation error:", error);
+      }
+    };
 
     // 🌐 Web Environment Path
     if (Platform.OS === 'web') {
-        const confirmed = window.confirm("Are you sure you want to cancel this coaching session?");
-        if (confirmed) {
-            executeCancellation();
-        }
+      const confirmed = window.confirm("Are you sure you want to cancel this coaching session?");
+      if (confirmed) {
+        await processCancellation();
+      }
     } 
     // 📱 Mobile App Path
     else {
-        Alert.alert(
-            "Cancel Appointment",
-            "Are you sure you want to cancel this coaching session?",
-            [
-                { text: "Keep Appointment", style: "cancel" },
-                { text: "Yes, Cancel", style: "destructive", onPress: executeCancellation }
-            ]
-        );
+      // You can add an Alert.alert here later for mobile confirmations!
+      await processCancellation();
     }
-};
+  };
+
 
 
   // 6. UI COMPONENT LAYOUT GENERATION
