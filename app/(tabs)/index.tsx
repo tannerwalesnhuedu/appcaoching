@@ -119,7 +119,7 @@ const handleUserSignOut = async (): Promise<void> => {
 };
 
   const handleCancelAppointment = async (slotId: string) => {
-    if (!user?.id) return;
+    if (!user?.id || !nextSession) return;
 
     // Define the core action to run when cancellation is confirmed
     const processCancellation = async () => {
@@ -130,8 +130,9 @@ const handleUserSignOut = async (): Promise<void> => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            target_slot_id: slotId,
-            target_user_id: user.id
+            target_user_id: user.id,
+  target_date: nextSession.session_date, // Enters '2026-08-06'
+  target_time: nextSession.session_time  // Enters '12:00 AM'
           })
         });
 
@@ -255,7 +256,7 @@ const handleUserSignOut = async (): Promise<void> => {
 
       <TouchableOpacity
         style={styles.cancelButton}
-       onPress={() => { alert("CLICK DETECTED!"); handleCancelAppointment(nextSession.id); }}
+       onPress={() => { alert("CLICK DETECTED!"); handleCancelAppointment(nextSession.id) }}
       >
         <Text style={styles.cancelButtonText}>Cancel Session</Text>
       </TouchableOpacity>
