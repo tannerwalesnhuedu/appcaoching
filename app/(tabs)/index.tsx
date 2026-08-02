@@ -118,36 +118,53 @@ const handleUserSignOut = async (): Promise<void> => {
   }
 };
 
-      const handleCancelAppointment = async (slotId: string) => {
-    if (!user?.id || !upcomingSessions.length) return;
+       const handleCancelAppointment = async (id: string) => {
+    // 1. Guard clause: Target the active dashboard card reference directly
+    if (!user?.id || !upcomingSessions || upcomingSessions.length === 0) {
+      alert("No active session or user found to process a cancellation.");
+      return;
+    }
 
-    // Web confirmation guard clause
+    // Access the current card directly from your active array list
+    const directSession = upcomingSessions[0];
+
+    // 2. Web browser confirmation guard clause
     if (Platform.OS === 'web') {
       const confirmed = window.confirm("Are you sure you want to cancel this coaching session?");
       if (!confirmed) return;
     }
 
     try {
-      // 1. Pass the unique UUID 'slotId' directly into your function call
-      const { error } = await supabase.rpc('secure_cancel_appointment_by_id', {
-        target_id: slotId,
+      console.log("Transmitting exact RPC keys to Supabase:", {
+        target_date: directSession.session_date,
+        target_time: directSession.session_time,
+        target_user_id: user.id
+      });
+
+      // 3. Invoke your functional SQL script using matching text keys
+      const { error } = await supabase.rpc('secure_cancel_appointment', {
+        target_date: directSession.session_date,
+        target_time: directSession.session_time,
         target_user_id: user.id
       });
 
       if (error) {
-        alert(`Cancellation failed: ${error.message}`);
+        alert(`Cancellation database error: ${error.message}`);
         return;
       }
 
       alert("Appointment successfully canceled!");
       
-      // 2. Clear out the array list hook to instantly update your homepage UI dashboard!
-      setUpcomingSessions((prev) => prev.filter((session) => session.id !== slotId));
+      // 4. Force state to empty to completely drop the card off your homepage view
+      setUpcomingSessions([]);
 
-    } catch (err) {
-      console.error("Cancellation error:", err);
+    } catch (err: any) {
+      console.error("Frontend execution exception caught:", err);
+      alert(`Unexpected workflow failure: ${err.message}`);
     }
   };
+
+
 
 
   // 6. UI COMPONENT LAYOUT GENERATION
@@ -238,12 +255,13 @@ const handleUserSignOut = async (): Promise<void> => {
         <Text style={styles.securedBadgeText}>Secured & Confirmed</Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.cancelButton}
-      onPress={() => handleCancelAppointment(nextSession.id)} 
-      >
-        <Text style={styles.cancelButtonText}>Cancel Session</Text>
-      </TouchableOpacity>
+      <TouchableOpacity 
+  style={styles.cancelButton}
+  onPress={() => handleCancelAppointment(upcomingSessions[0].id)} // Clean, direct function reference call
+>
+  <Text style={styles.cancelButtonText}>Cancel Session</Text>
+</TouchableOpacity>
+
     </View>
   </View>
 ) : (
