@@ -133,7 +133,10 @@ const handleCancelAppointment = async (slotId: string) => {
             Alert.alert("Success", "Your appointment has been successfully canceled.");
             
             // 🔄 Call your screen's data refetch function to refresh the home state layout
-            if (typeof fetchUserAppointments === 'function') fetchUserAppointments(user.id, true);
+            if (typeof fetchUserAppointments === 'function' && user?.id) {
+            fetchUserAppointments(user.id, true);
+}
+
 
           } catch (err: any) {
             Alert.alert("Cancellation Denied", err.message || "Could not complete operation.");
