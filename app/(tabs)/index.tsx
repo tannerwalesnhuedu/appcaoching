@@ -120,54 +120,48 @@ const handleUserSignOut = async (): Promise<void> => {
 
 
 const handleCancelAppointment = async (slotId: string) => {
-  if (!user?.id) return;
+    if (!user?.id) return;
 
-  // Confirm user intent before processing changes
-  Alert.alert(
-    "Cancel Appointment",
-    "Are you sure you want to cancel this coaching session?",
-    [
-      { text: "Keep Appointment", style: "cancel" },
-      {
-        text: "Yes, Cancel",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const response = await fetch('https://appcaoching.vercel.app', {
-              method: 'DELETE',
-               headers: {
-        'Content-Type': 'application/json',
-        // If your auth provider provides a JWT/session token, pass it here:
-        // 'Authorization': `Bearer ${sessionToken}` 
-    },
-    body: JSON.stringify({ slotId })
-            });
+    // Confirm user intent before processing changes
+    Alert.alert(
+        "Cancel Appointment",
+        "Are you sure you want to cancel this coaching session?",
+        [
+            { text: "Keep Appointment", style: "cancel" },
+            {
+                text: "Yes, Cancel",
+                style: "destructive",
+                onPress: async () => {
+                    try {
+                        const response = await fetch('https://vercel.app', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ slotId })
+                        });
 
-         const result = await response.json();
+                        const result = await response.json();
 
-    if (!response.ok) {
-        throw new Error(result.message || 'Cancellation rejected by backend security filters.');
-    }
-    
-        // 🔄 Success Execution Path
-        if (nextSession?.id === slotId) {
-          setUpcomingSessions([]);
-        }
+                        if (!response.ok) {
+                            throw new Error(result.error || 'Failed to cancel appointment');
+                        }
 
-        if (typeof fetchUserAppointments === 'function' && (user?.id || nextSession?.user_id)) {
-          fetchUserAppointments(user?.id || nextSession?.user_id, true); // Pulls fresh available slot matrices
-        }
+                        Alert.alert("Success", "Your appointment has been successfully removed.");
+                        
+                        if (typeof fetchUserAppointments === 'function') {
+                            fetchUserAppointments(user?.id, true);
+                        }
 
-        Alert.alert("Success", "Your appointment has been successfully removed.");
-
-      } catch (err: any) {
-        Alert.alert("Cancellation Denied", err.message || "Could not complete operation.");
-      }
-        }
-      }
-    ]
-  );
+                    } catch (error: any) {
+                        Alert.alert("Error", error.message || "Could not complete operation.");
+                    }
+                }
+            }
+        ]
+    );
 };
+
 
 
   // 6. UI COMPONENT LAYOUT GENERATION
@@ -253,8 +247,7 @@ const handleCancelAppointment = async (slotId: string) => {
   </View>
    <TouchableOpacity 
     style={styles.cancelButton}
-    onPress={() => handleCancelAppointment(nextSession.id)}
-  >
+    onPress={() => handleCancelAppointment(nextSession.id)}>
     <Text style={styles.cancelButtonText}>Cancel Session</Text>
   </TouchableOpacity>
           </View> 
