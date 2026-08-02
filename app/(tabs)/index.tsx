@@ -118,18 +118,19 @@ const handleUserSignOut = async (): Promise<void> => {
   }
 };
 
-    const handleCancelAppointment = async (slotId: string) => {
+      const handleCancelAppointment = async (slotId: string) => {
     if (!user?.id || !upcomingSessions.length) return;
 
-    // Find the current session being canceled from your array list
-    const targetSession = upcomingSessions.find((s) => s.id === slotId);
-    if (!targetSession) return;
+    // Web confirmation guard clause
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm("Are you sure you want to cancel this coaching session?");
+      if (!confirmed) return;
+    }
 
     try {
-      // 1. Call your brand new Supabase RPC database function
-      const { error } = await supabase.rpc('secure_cancel_appointment', {
-        target_date: targetSession.session_date,
-        target_time: targetSession.session_time,
+      // 1. Pass the unique UUID 'slotId' directly into your function call
+      const { error } = await supabase.rpc('secure_cancel_appointment_by_id', {
+        target_id: slotId,
         target_user_id: user.id
       });
 
@@ -139,8 +140,8 @@ const handleUserSignOut = async (): Promise<void> => {
       }
 
       alert("Appointment successfully canceled!");
-
-      // 2. Clear out the array list hook. This automatically updates your homepage UI!
+      
+      // 2. Clear out the array list hook to instantly update your homepage UI dashboard!
       setUpcomingSessions((prev) => prev.filter((session) => session.id !== slotId));
 
     } catch (err) {
