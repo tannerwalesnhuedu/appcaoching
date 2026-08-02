@@ -193,6 +193,20 @@ const handleCancelAppointment = async (slotId: string) => {
         )} 
       </View> 
 
+      {/* 👤 Top Dashboard Header Navigation Row */}
+<View style={styles.headerRow}>
+  <Text style={styles.header}>Dashboard</Text>
+
+  {/* 👇 INTERACTIVE SIGN OUT TRIGGER 👇 */}
+  <TouchableOpacity 
+    style={styles.signOutButton}
+    onPress={handleUserSignOut}
+  >
+    <Text style={styles.signOutText}>Sign Out</Text>
+  </TouchableOpacity>
+</View>
+
+
       {/* Quick Metrics Status Panel */} 
       <View style={styles.metricsGrid}> 
         <View style={styles.metricCard}> 
@@ -284,6 +298,10 @@ const styles = StyleSheet.create({
   welcomeSection: { marginBottom: 20 }, 
   greetingText: { fontSize: 16, color: '#64748b' }, 
   emailText: { fontSize: 22, fontWeight: 'bold', color: '#1e293b' }, 
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  header: { fontSize: 28, fontWeight: 'bold', color: '#111' },
+  signOutButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' },
+  signOutText: { color: '#dc2626', fontWeight: '600', fontSize: 14 },
   heroCard: { backgroundColor: '#2b1a9e', padding: 20, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }, 
   heroInfo: { flex: 1, marginRight: 10 }, 
   heroTitle: { fontSize: 20, fontWeight: 'bold', color: '#ffffff', marginBottom: 6 }, 
