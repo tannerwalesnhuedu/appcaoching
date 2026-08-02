@@ -135,11 +135,12 @@ const handleCancelAppointment = async (slotId: string) => {
           try {
             const response = await fetch('https://appcaoching.vercel.app', {
               method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-              target_slot_id: slotId,
-              target_user_id: user?.id || nextSession?.user_id // 🛡️ Stripped out the incorrect slot id fallback string block
-          }),
+               headers: {
+        'Content-Type': 'application/json',
+        // If your auth provider provides a JWT/session token, pass it here:
+        // 'Authorization': `Bearer ${sessionToken}` 
+    },
+    body: JSON.stringify({ slotId })
             });
 
          const result = await response.json();
