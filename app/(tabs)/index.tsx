@@ -134,6 +134,22 @@ const handleCancelAppointment = async (slotId: string) => {
 
             const result = await response.json();
 
+            // 1. Show confirmation to the user
+            alert("Success! Your appointment has been canceled and released back to the calendar.");
+            
+            // 2. Clear out local state immediately to force the UI to remove the card
+            if (typeof setUpcomingSessions === 'function') {
+                setUpcomingSessions([]); // Clear current viewing list
+            }
+            
+            // 3. Re-fetch clean data from database
+            if (typeof fetchUserAppointments === 'function') {
+                fetchUserAppointments(user?.id || "", true); 
+            } else {
+                // Fail-safe: hard refresh the browser window to guarantee UI matches database
+                window.location.reload();
+            }
+
             if (!response.ok) {
                 throw new Error(result.error || 'Failed to cancel appointment');
             }
@@ -268,7 +284,6 @@ const handleCancelAppointment = async (slotId: string) => {
       <TouchableOpacity
         style={styles.cancelButton}
        onPress={() => { alert("CLICK DETECTED!"); handleCancelAppointment(nextSession.id); }}
-
       >
         <Text style={styles.cancelButtonText}>Cancel Session</Text>
       </TouchableOpacity>

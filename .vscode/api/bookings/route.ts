@@ -9,6 +9,7 @@ const bookingPayloadSchema = z.object({
   price: z.number().positive(),
 });
 
+
 export async function POST(request: Request) {
   try {
     // 🛡️ LAYER 1 DEFENSE: Supabase-Backed Serverless Rate Limiter
@@ -53,11 +54,13 @@ export async function POST(request: Request) {
   }
 }
 
-// 🛡️ Add this DELETE method handler to your existing route.ts file
+// ️ Add this DELETE method handler to your existing route.ts file
 export async function DELETE(request: Request) {
+
+  
   try {
     const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
-    const { target_slot_id, target_user_id } = await request.json();
+   const { target_slot_id, target_user_id } = await request.json();
 
     // 1. Rate Limit Check: Limit cancellations to 3 per rolling hour per IP
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
