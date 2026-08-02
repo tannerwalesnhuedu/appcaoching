@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase'; // Adjust path to match your Supabase initialization client file
+import { supabase } from '../../../lib/supabase'; // Adjust path to match your Supabase initialization client file
 
 const bookingPayloadSchema = z.object({
   target_slot_id: z.string().uuid(),
