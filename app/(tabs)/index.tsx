@@ -100,17 +100,6 @@ if (!isMounted || loading) {
   return <></>; // This fixes the TypeScript error safely
 }
 
-async function handleSignOut(): Promise<void> {
-  try {
-    await supabase.auth.signOut();
-    // 💡 INDUSTRY STANDARD: Push the user completely out to the login checkpoint screen
-    router.replace("/login" as any);
-  } catch (error) {
-    console.error("Error signing out:", error);
-  }
-}
-
-
 const handleCancelAppointment = async (slotId: string) => {
   if (!user?.id) return;
 
@@ -125,7 +114,7 @@ const handleCancelAppointment = async (slotId: string) => {
         style: "destructive",
         onPress: async () => {
           try {
-            const response = await fetch('https://appcaoching.vercel.app/', {
+            const response = await fetch('https://vercel.app', {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -145,7 +134,7 @@ const handleCancelAppointment = async (slotId: string) => {
             
             // 🔄 Call your screen's data refetch function to refresh the home state layout
             if (typeof fetchUserAppointments === 'function' && user?.id) {
-            fetchUserAppointments(user.id, true);
+        fetchUserAppointments(user.id, true);
 }
 
 
