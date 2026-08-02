@@ -175,8 +175,6 @@ const handleCancelAppointment = async (slotId: string) => {
         <Text style={styles.greetingText}>Welcome Back,</Text> 
         <Text style={styles.emailText}>{userEmail}</Text> 
       </View> 
-
-  return (
     <View style={styles.container}>
       {/* 🏛️ Centered content wrapper matching your layout limits */}
       <View style={styles.centeredContentWrapper}>
@@ -192,9 +190,6 @@ const handleCancelAppointment = async (slotId: string) => {
             <Text style={styles.signOutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
-
-        {/* The rest of your home page code cards go directly here... */}
-
       </View>
     </View>
   );
