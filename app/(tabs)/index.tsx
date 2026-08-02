@@ -124,7 +124,7 @@ const handleCancelAppointment = async (slotId: string) => {
     // Define the core action to run when cancellation is confirmed
     const executeCancellation = async () => {
         try {
-            const response = await fetch('https://vercel.appapi/bookings', {
+            const response = await fetch('/api/bookings', {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
