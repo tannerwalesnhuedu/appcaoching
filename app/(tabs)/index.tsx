@@ -255,12 +255,13 @@ const handleUserSignOut = async (): Promise<void> => {
         <Text style={styles.securedBadgeText}>Secured & Confirmed</Text>
       </View>
 
-      <TouchableOpacity 
+  <TouchableOpacity 
   style={styles.cancelButton}
-  onPress={() => handleCancelAppointment(upcomingSessions[0].id)} // Clean, direct function reference call
+onPress={() => handleCancelAppointment(upcomingSessions[0].id)}
 >
   <Text style={styles.cancelButtonText}>Cancel Session</Text>
 </TouchableOpacity>
+
 
     </View>
   </View>
