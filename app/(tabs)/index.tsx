@@ -142,13 +142,12 @@ const handleCancelAppointment = async (slotId: string) => {
           }),
             });
 
-            const result = await response.json();
+         const result = await response.json();
 
-         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || 'Cancellation rejected by backend security filters.');
-        }
-
+    if (!response.ok) {
+        throw new Error(result.message || 'Cancellation rejected by backend security filters.');
+    }
+    
         // 🔄 Success Execution Path
         if (nextSession?.id === slotId) {
           setUpcomingSessions([]);
