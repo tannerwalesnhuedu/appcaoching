@@ -17,6 +17,8 @@ interface Appointment {
 export default function HomeScreen(): React.JSX.Element { 
   // 1. ALL REACT HOOKS INITIALIZED TOGETHER AT THE TOP
   const [userEmail, setUserEmail] = useState<string>(''); 
+  // This teaches TypeScript exactly what is inside 'prev' and 'app'
+const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<Appointment[]>([]); 
   const [loading, setLoading] = useState<boolean>(true); 
   const [isMounted, setIsMounted] = useState<boolean>(false);
@@ -396,7 +398,4 @@ const styles = StyleSheet.create({
     color: '#b91c1c', // Muted dark red alert color matching the border lines
   },
 });
-function setAppointments(arg0: (prev: any) => any) {
-  throw new Error('Function not implemented.');
-}
 
