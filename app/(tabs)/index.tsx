@@ -122,40 +122,35 @@ const handleUserSignOut = async (): Promise<void> => {
   }
 };
 
-  const handleCancelAppointment = async (appointmentId: string) => {
-    // 1. Guard clause fixed: Now user.id will exist!
-    if (!user?.id) {
-      alert("No active session found. Please sign out and sign back in.");
-      return;
-    }
+ const handleCancelAppointment = async (appointmentId: string) => {
+  if (!user?.id) return;
 
-    try {
-      // 2. Clear out ALL booking columns in Supabase
-      const { error } = await supabase
-        .from('appointments')
-        .update({ 
-          is_booked: false,
-          client_email: null,
-          user_id: null 
-        })
-        .eq('id', appointmentId);
+  try {
+    const { error } = await supabase
+      .from('appointments')
+      .update({ 
+        is_booked: false,
+        client_email: null,
+        user_id: null 
+      })
+      .eq('id', appointmentId);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      // 3. Clear from local state array immediately so the UI snaps clean
-      setAppointments((prev) => prev.filter((app) => app.id !== appointmentId));
-      setUpcomingSessions((prev) => prev.filter((app) => app.id !== appointmentId)); // Clear from dashboard array too
+    // 1. Wipe local home arrays
+    setAppointments((prev) => prev.filter((app) => app.id !== appointmentId));
+    setUpcomingSessions((prev) => prev.filter((app) => app.id !== appointmentId));
 
-      alert("Session successfully canceled!");
+    // 2. INDUSTRY STANDARD: Re-fetch user datasets immediately to clear all components
+    // This forces any background states keeping track of slots to re-sync
+    await fetchUserAppointments(user.id, true); 
 
-    } catch (error) {
-      console.error('Cancellation failed:', error);
-      alert('Failed to clear appointment state.');
-    }
-  };
+    alert("Session successfully canceled and slot reset!");
 
-
-
+  } catch (error) {
+    console.error('Cancellation failed:', error);
+  }
+};
 
   // 6. UI COMPONENT LAYOUT GENERATION
   return ( 
