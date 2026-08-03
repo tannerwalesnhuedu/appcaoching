@@ -134,34 +134,20 @@ const handleUserSignOut = async (): Promise<void> => {
       if (!confirmed) return;
     }
 
-    try {
-      console.log("Transmitting exact RPC keys to Supabase:", {
-        target_date: directSession.session_date,
-        target_time: directSession.session_time,
-        target_user_id: user.id
-      });
-
-      // 3. Invoke your functional SQL script using matching text keys
-      const { error } = await supabase.rpc('secure_cancel_appointment', {
-        target_date: directSession.session_date,
-        target_time: directSession.session_time,
-        target_user_id: user.id
-      });
-
-      if (error) {
-        alert(`Cancellation database error: ${error.message}`);
-        return;
-      }
-
-      alert("Appointment successfully canceled!");
-      
-      // 4. Force state to empty to completely drop the card off your homepage view
-      setUpcomingSessions([]);
-
-    } catch (err: any) {
-      console.error("Frontend execution exception caught:", err);
-      alert(`Unexpected workflow failure: ${err.message}`);
-    }
+     try {
+    // 1. Update the database using matching column names
+    const { error } = await supabase
+      .from('appointments')
+      .update({ 
+        is_booked: false,
+        client_email: null,
+        user_id: null // Clear this if your RLS needs it open for anyone to re-book
+      })
+      .eq('id', id);
+      console.error('Error canceling appointment:', error);
+    } catch (error) {
+    console.error('Error canceling appointment:', error);
+  }
   };
 
 
@@ -405,3 +391,7 @@ const styles = StyleSheet.create({
     color: '#b91c1c', // Muted dark red alert color matching the border lines
   },
 });
+function setAppointments(arg0: (prev: any) => any) {
+  throw new Error('Function not implemented.');
+}
+
