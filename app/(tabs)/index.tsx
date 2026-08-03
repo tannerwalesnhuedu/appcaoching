@@ -11,7 +11,7 @@ interface Appointment {
   is_booked: boolean; 
   user_id?: string; 
   client_email?: string; 
-  price?: number | string; // Optional price field
+  price?: number; // Optional price field
 } 
 
 export default function HomeScreen(): React.JSX.Element { 
