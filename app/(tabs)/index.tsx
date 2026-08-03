@@ -25,21 +25,22 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
   const router = useRouter(); 
   const [user, setUser] = useState<any>(null);
   
-    // Real-time Auth listener handling both client mounting and session tracking
+      // Real-time Auth listener handling both client mounting and session tracking
   useEffect(() => {
     setIsMounted(true);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        // Keeps your existing state variable updated
+        setUser(session.user); // FIXED: Save the user object to state!
         setUserEmail(session.user.email || 'Valued Client');
-        
-        // Triggers your appointment data fetcher
         fetchUserAppointments(session.user.id, true);
         setLoading(false);
       } else {
         setLoading(false);
-        router.replace("/login" as any);
+        // FIXED: Only redirect after the component has safely mounted to stop Error #418
+        if (isMounted) {
+          router.replace("/login" as any);
+        }
       }
     });
 
@@ -47,7 +48,8 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isMounted]); // Added isMounted dependency here to ensure safe redirection
+
 
   // 2. CORE DATABASE CALL IMPLEMENTATION
    const fetchUserAppointments = async (userId: string, showLoading = false) => {
@@ -120,41 +122,36 @@ const handleUserSignOut = async (): Promise<void> => {
   }
 };
 
-       const handleCancelAppointment = async (appointmentId: string) => {
-    // 1. Guard clause: Target the active dashboard card reference directly
-    if (!user?.id || !upcomingSessions || upcomingSessions.length === 0) {
-      alert("No active session or user found to process a cancellation.");
-      return;
-    }
-
-     try {
-    // 1. Explicitly check for an active user session
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
+  const handleCancelAppointment = async (appointmentId: string) => {
+    // 1. Guard clause fixed: Now user.id will exist!
+    if (!user?.id) {
       alert("No active session found. Please sign out and sign back in.");
       return;
     }
 
-    // 2. Clear out ALL booking columns to completely reset the state
-    const { error } = await supabase
-      .from('appointments')
-      .update({ 
-        is_booked: false,
-        client_email: null,
-        user_id: null // Fully unbind the user so it resets to an open state
-      })
-      .eq('id', appointmentId);
+    try {
+      // 2. Clear out ALL booking columns in Supabase
+      const { error } = await supabase
+        .from('appointments')
+        .update({ 
+          is_booked: false,
+          client_email: null,
+          user_id: null 
+        })
+        .eq('id', appointmentId);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // 3. Update local state to immediately drop it from "Your Confirmed Appointments"
-    setAppointments((prev) => prev.filter((app: { id: string }) => app.id !== appointmentId));
+      // 3. Clear from local state array immediately so the UI snaps clean
+      setAppointments((prev) => prev.filter((app) => app.id !== appointmentId));
+      setUpcomingSessions((prev) => prev.filter((app) => app.id !== appointmentId)); // Clear from dashboard array too
 
-  } catch (error) {
-    console.error('Cancellation failed:', error);
-    alert('Failed to clear appointment state.');
-  }
+      alert("Session successfully canceled!");
+
+    } catch (error) {
+      console.error('Cancellation failed:', error);
+      alert('Failed to clear appointment state.');
+    }
   };
 
 
