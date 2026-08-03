@@ -118,35 +118,40 @@ const handleUserSignOut = async (): Promise<void> => {
   }
 };
 
-       const handleCancelAppointment = async (id: string) => {
+       const handleCancelAppointment = async (appointmentId: string) => {
     // 1. Guard clause: Target the active dashboard card reference directly
     if (!user?.id || !upcomingSessions || upcomingSessions.length === 0) {
       alert("No active session or user found to process a cancellation.");
       return;
     }
 
-    // Access the current card directly from your active array list
-    const directSession = upcomingSessions[0];
-
-    // 2. Web browser confirmation guard clause
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm("Are you sure you want to cancel this coaching session?");
-      if (!confirmed) return;
+     try {
+    // 1. Explicitly check for an active user session
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      alert("No active session found. Please sign out and sign back in.");
+      return;
     }
 
-     try {
-    // 1. Update the database using matching column names
+    // 2. Clear out ALL booking columns to completely reset the state
     const { error } = await supabase
       .from('appointments')
       .update({ 
         is_booked: false,
         client_email: null,
-        user_id: null // Clear this if your RLS needs it open for anyone to re-book
+        user_id: null // Fully unbind the user so it resets to an open state
       })
-      .eq('id', id);
-      console.error('Error canceling appointment:', error);
-    } catch (error) {
-    console.error('Error canceling appointment:', error);
+      .eq('id', appointmentId);
+
+    if (error) throw error;
+
+    // 3. Update local state to immediately drop it from "Your Confirmed Appointments"
+    setAppointments((prev) => prev.filter((app: { id: string }) => app.id !== appointmentId));
+
+  } catch (error) {
+    console.error('Cancellation failed:', error);
+    alert('Failed to clear appointment state.');
   }
   };
 
