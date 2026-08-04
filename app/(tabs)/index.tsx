@@ -25,11 +25,8 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
   const router = useRouter(); 
   const [user, setUser] = useState<any>(null);
   
-   // Real-time Auth listener handling both client mounting and session tracking
-  useEffect(() => {
+   useEffect(() => {
     setIsMounted(true);
-
-    // Track the active real-time channel to clean up later
     let appointmentsChannel: any = null;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -39,7 +36,6 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
         fetchUserAppointments(session.user.id, true);
         setLoading(false);
 
-        // SECURE REAL-TIME FILTERING: Only listen to changes for this specific user
         if (!appointmentsChannel) {
           appointmentsChannel = supabase
             .channel(`user-appointments-${session.user.id}`)
@@ -49,40 +45,51 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
                 event: 'INSERT',
                 schema: 'public',
                 table: 'appointments',
-                filter: `user_id=eq.${session.user.id}` // Server-enforced safety filter
               },
               (payload) => {
+                console.log("🔥 REALTIME DATA INBOUND:", payload.new);
                 const newAppointment = payload.new as Appointment;
                 setAppointments((prev) => [newAppointment, ...prev]);
+                setUpcomingSessions((prev) => [newAppointment, ...prev]);
               }
             )
             .subscribe();
         }
-
       } else {
         setLoading(false);
-        
-        // Remove the real-time stream immediately when the user logs out
         if (appointmentsChannel) {
           supabase.removeChannel(appointmentsChannel);
           appointmentsChannel = null;
         }
-
-        // FIXED: Only redirect after the component has safely mounted to stop Error #418
         if (isMounted) {
           router.replace("/login" as any);
         }
       }
     });
 
-    // Clean up both the auth subscription and real-time listener when leaving the home screen
     return () => {
       subscription.unsubscribe();
       if (appointmentsChannel) {
         supabase.removeChannel(appointmentsChannel);
       }
     };
-  }, [isMounted]); // Dependency ensures isMounted state triggers safe redirects
+  }, [isMounted]);
+
+  // =========================================================================
+  // 3. CORE DATABASE CALL IMPLEMENTATION
+  // =========================================================================
+
+  // =========================================================================
+  // 4. LOADING MASK VIEW SWITCH
+  // =========================================================================
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#2b1a9e" />
+        <Text style={styles.loadingText}>Syncing personalized dashboard records securely...</Text>
+      </View>
+    );
+  }
 
   // 2. CORE DATABASE CALL IMPLEMENTATION
    const fetchUserAppointments = async (userId: string, showLoading = false) => {
@@ -311,7 +318,7 @@ onPress={() => handleCancelAppointment(upcomingSessions[0].id)}
         </View> 
       )} 
     </ScrollView> 
-  ); 
+  )
 } 
 
 const styles = StyleSheet.create({ 
@@ -423,4 +430,8 @@ const styles = StyleSheet.create({
     color: '#b91c1c', // Muted dark red alert color matching the border lines
   },
 });
+
+function setLoading(arg0: boolean) {
+  throw new Error('Function not implemented.');
+}
 
