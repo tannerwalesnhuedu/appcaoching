@@ -25,18 +25,21 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
   const router = useRouter(); 
   const [user, setUser] = useState<any>(null);
   
-   useEffect(() => {
+   // Real-time Auth listener handling both client mounting and session tracking
+  useEffect(() => {
     setIsMounted(true);
+
+    // Track the active real-time channel to clean up later
     let appointmentsChannel: any = null;
 
-       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // 1. If a valid user session exists, run updates safely
-      if (session && session.user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
         setUser(session.user); 
         setUserEmail(session.user.email || 'Valued Client');
-        fetchUserAppointments(session.user.id, false); // Turn off loading flash
+        fetchUserAppointments(session.user.id, true);
         setLoading(false);
 
+        // SECURE REAL-TIME FILTERING: Only listen to changes for this specific user
         if (!appointmentsChannel) {
           appointmentsChannel = supabase
             .channel(`user-appointments-${session.user.id}`)
@@ -46,42 +49,40 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
                 event: 'INSERT',
                 schema: 'public',
                 table: 'appointments',
+                filter: `user_id=eq.${session.user.id}` // Server-enforced safety filter
               },
               (payload) => {
-                console.log("🔥 REALTIME DATA INBOUND:", payload.new);
                 const newAppointment = payload.new as Appointment;
                 setAppointments((prev) => [newAppointment, ...prev]);
-                setUpcomingSessions((prev) => [newAppointment, ...prev]);
               }
             )
             .subscribe();
         }
-      } 
-      
-      // 2. FIXED STRICT LOGOUT: Only kick them out if there is genuinely no user session
-      else if (!session) {
+
+      } else {
         setLoading(false);
+        
+        // Remove the real-time stream immediately when the user logs out
         if (appointmentsChannel) {
           supabase.removeChannel(appointmentsChannel);
           appointmentsChannel = null;
         }
-        
-        // Only redirect if the app is confirmed unauthenticated
+
+        // FIXED: Only redirect after the component has safely mounted to stop Error #418
         if (isMounted) {
           router.replace("/login" as any);
         }
       }
     });
-  }, [isMounted]);
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2b1a9e" />
-        <Text style={styles.loadingText}>Syncing personalized dashboard records securely...</Text>
-      </View>
-    );
-  }
+    // Clean up both the auth subscription and real-time listener when leaving the home screen
+    return () => {
+      subscription.unsubscribe();
+      if (appointmentsChannel) {
+        supabase.removeChannel(appointmentsChannel);
+      }
+    };
+  }, [isMounted]); // Dependency ensures isMounted state triggers safe redirects
 
   // 2. CORE DATABASE CALL IMPLEMENTATION
    const fetchUserAppointments = async (userId: string, showLoading = false) => {
@@ -310,7 +311,7 @@ onPress={() => handleCancelAppointment(upcomingSessions[0].id)}
         </View> 
       )} 
     </ScrollView> 
-  )
+  ); 
 } 
 
 const styles = StyleSheet.create({ 
@@ -422,8 +423,4 @@ const styles = StyleSheet.create({
     color: '#b91c1c', // Muted dark red alert color matching the border lines
   },
 });
-
-function setLoading(arg0: boolean) {
-  throw new Error('Function not implemented.');
-}
 
