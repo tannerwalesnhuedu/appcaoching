@@ -29,11 +29,12 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
     setIsMounted(true);
     let appointmentsChannel: any = null;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
+       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // 1. If a valid user session exists, run updates safely
+      if (session && session.user) {
         setUser(session.user); 
         setUserEmail(session.user.email || 'Valued Client');
-        fetchUserAppointments(session.user.id, true);
+        fetchUserAppointments(session.user.id, false); // Turn off loading flash
         setLoading(false);
 
         if (!appointmentsChannel) {
@@ -55,33 +56,24 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
             )
             .subscribe();
         }
-      } else {
+      } 
+      
+      // 2. FIXED STRICT LOGOUT: Only kick them out if there is genuinely no user session
+      else if (!session) {
         setLoading(false);
         if (appointmentsChannel) {
           supabase.removeChannel(appointmentsChannel);
           appointmentsChannel = null;
         }
+        
+        // Only redirect if the app is confirmed unauthenticated
         if (isMounted) {
           router.replace("/login" as any);
         }
       }
     });
-
-    return () => {
-      subscription.unsubscribe();
-      if (appointmentsChannel) {
-        supabase.removeChannel(appointmentsChannel);
-      }
-    };
   }, [isMounted]);
 
-  // =========================================================================
-  // 3. CORE DATABASE CALL IMPLEMENTATION
-  // =========================================================================
-
-  // =========================================================================
-  // 4. LOADING MASK VIEW SWITCH
-  // =========================================================================
   if (loading) {
     return (
       <View style={styles.center}>
