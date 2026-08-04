@@ -25,7 +25,7 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
   const router = useRouter(); 
   const [user, setUser] = useState<any>(null);
   
-   // Real-time Auth listener handling both client mounting and session tracking
+    // Real-time Auth listener handling both client mounting and session tracking
   useEffect(() => {
     setIsMounted(true);
 
