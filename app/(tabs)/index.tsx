@@ -25,18 +25,49 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
   const router = useRouter(); 
   const [user, setUser] = useState<any>(null);
   
-      // Real-time Auth listener handling both client mounting and session tracking
+   // Real-time Auth listener handling both client mounting and session tracking
   useEffect(() => {
     setIsMounted(true);
 
+    // Track the active real-time channel to clean up later
+    let appointmentsChannel: any = null;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        setUser(session.user); // FIXED: Save the user object to state!
+        setUser(session.user); 
         setUserEmail(session.user.email || 'Valued Client');
         fetchUserAppointments(session.user.id, true);
         setLoading(false);
+
+        // SECURE REAL-TIME FILTERING: Only listen to changes for this specific user
+        if (!appointmentsChannel) {
+          appointmentsChannel = supabase
+            .channel(`user-appointments-${session.user.id}`)
+            .on(
+              'postgres_changes',
+              {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'appointments',
+                filter: `user_id=eq.${session.user.id}` // Server-enforced safety filter
+              },
+              (payload) => {
+                const newAppointment = payload.new as Appointment;
+                setAppointments((prev) => [newAppointment, ...prev]);
+              }
+            )
+            .subscribe();
+        }
+
       } else {
         setLoading(false);
+        
+        // Remove the real-time stream immediately when the user logs out
+        if (appointmentsChannel) {
+          supabase.removeChannel(appointmentsChannel);
+          appointmentsChannel = null;
+        }
+
         // FIXED: Only redirect after the component has safely mounted to stop Error #418
         if (isMounted) {
           router.replace("/login" as any);
@@ -44,12 +75,14 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
       }
     });
 
-    // Clean up the active listener when the user leaves the home screen
+    // Clean up both the auth subscription and real-time listener when leaving the home screen
     return () => {
       subscription.unsubscribe();
+      if (appointmentsChannel) {
+        supabase.removeChannel(appointmentsChannel);
+      }
     };
-  }, [isMounted]); // Added isMounted dependency here to ensure safe redirection
-
+  }, [isMounted]); // Dependency ensures isMounted state triggers safe redirects
 
   // 2. CORE DATABASE CALL IMPLEMENTATION
    const fetchUserAppointments = async (userId: string, showLoading = false) => {
