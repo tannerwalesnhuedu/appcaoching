@@ -320,6 +320,7 @@ return (
           <Text style={styles.subHeader}>Select an active date square to view open available options.</Text>
           <View style={styles.calendarWrapper}>
             <Calendar 
+            showSixWeeks={true}
   // 1. Pass your newly adjusted marking configurations
   markedDates={getMarkedDates()}
   // 2. This locks down all dates on the calendar by default
@@ -363,7 +364,7 @@ return (
                 {/* Securely Scrollable Interactive List Box */}
                 {processedSlots.length === 0 ? (
                   <View style={styles.modalEmptyStateBox}>
-                    <Text style={styles.noSlotsText}>No openings listed on this specific day.</Text>
+                    <Text style={styles.noSlotsText}></Text>
                   </View>
                 ) : (
                   // app/(tabs)/booking.tsx ➔ Inside your Modal's FlatList component, update the renderItem:
