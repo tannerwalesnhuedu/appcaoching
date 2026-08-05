@@ -321,6 +321,12 @@ return (
           <View style={styles.calendarWrapper}>
             <Calendar 
             showSixWeeks={true}
+     // 1. Lock the calendar view strictly to the current date
+  current={new Date().toISOString().split('T')[0]}
+  // Hide the navigation arrows completely
+  hideArrows={true}
+  // Prevent the user from choosing a month via swipe gestures
+  disableMonthChange={true}      
   // 1. Pass your newly adjusted marking configurations
   markedDates={getMarkedDates()}
   // 2. This locks down all dates on the calendar by default
@@ -328,7 +334,7 @@ return (
   // 3. This completely prevents the onPress event from firing on disabled days
   disableAllTouchEventsForDisabledDays={true}
     // Optional: Gray out disabled day text numbers even further for clear UI contrast
-              minDate={todayString} 
+              minDate={new Date().toISOString().split('T')[0]} // Prevents looking at past months
               markingType={'custom'} 
               onDayPress={(day) => handleSelectDay(day.dateString)} 
               theme={{ 
@@ -417,7 +423,7 @@ return (
           </Modal>
 
           {!selectedDate && (
-            <Text style={styles.promptText}>Tap an active calendar date square to review options.</Text>
+            <Text style={styles.promptText}></Text>
           )}
         </View>
       ) : (
