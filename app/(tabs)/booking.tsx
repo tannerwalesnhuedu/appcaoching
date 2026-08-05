@@ -320,11 +320,16 @@ return (
           <Text style={styles.subHeader}>Select an active date square to view open available options.</Text>
           <View style={styles.calendarWrapper}>
             <Calendar 
+  // 1. Pass your newly adjusted marking configurations
+  markedDates={getMarkedDates()}
+  // 2. This locks down all dates on the calendar by default
+  disabledByDefault={true}
+  // 3. This completely prevents the onPress event from firing on disabled days
+  disableAllTouchEventsForDisabledDays={true}
+    // Optional: Gray out disabled day text numbers even further for clear UI contrast
               minDate={todayString} 
-              disableAllTouchEventsForDisabledDays={true} 
               markingType={'custom'} 
               onDayPress={(day) => handleSelectDay(day.dateString)} 
-              markedDates={getMarkedDates()} 
               theme={{ 
                 todayTextColor: '#002b1a', 
                 selectedDayBackgroundColor: '#002b1a', 
