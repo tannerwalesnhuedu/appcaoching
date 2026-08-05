@@ -93,44 +93,47 @@ useEffect(() => {
 }, [checkingAuth]); // Re-runs safely whenever checkingAuth updates
 
 
-  async function fetchData(isMounted: boolean): Promise<void> { 
-    setLoading(true); 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  async function fetchData(isMounted: boolean): Promise<void> {
+  setLoading(true);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
 
-    if (activeTab === 'book') {
-      const { data, error } = await supabase 
-        .from('appointments') 
-        .select('id, session_date, session_time, is_booked, user_id, price') 
-        .order('session_time', { ascending: true }); 
+  if (activeTab === 'book') {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, session_date, session_time, is_booked, user_id, price')
+      // 💡 THE CRITICAL SECURITY FIX: Never send already booked appointments to the browser calendar grid!
+      .eq('is_booked', false) 
+      .order('session_time', { ascending: true });
 
-      if (!isMounted) return; 
-      if (error) { 
-        Alert.alert('Database Error', 'Could not read available calendar openings.'); 
-      } else if (data) { 
-        setAllSlots(data as Appointment[]); 
-        if (selectedDate) { 
-          setFilteredSlots( 
-            (data as Appointment[]).filter((slot) => slot.session_date === selectedDate && !slot.is_booked) 
-          ); 
-        } 
-      }
-    } else {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('id, session_date, session_time, is_booked, user_id')
-        .eq('user_id', user.id)
-        .order('session_date', { ascending: true });
-
-      if (!isMounted) return;
-      if (error) {
-        Alert.alert('Error', 'Could not retrieve your schedule history.');
-      } else if (data) {
-        setMySchedule(data as Appointment[]);
+    if (!isMounted) return;
+    if (error) {
+      Alert.alert('Database Error', 'Could not read available calendar openings.');
+    } else if (data) {
+      setAllSlots(data as Appointment[]);
+      if (selectedDate) {
+        setFilteredSlots(
+          (data as Appointment[]).filter((slot) => slot.session_date === selectedDate)
+        );
       }
     }
-    setLoading(false); 
-  } 
+  } else {
+    // Keep your "My Schedule" tab logic identical (this should display user's booked items)
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, session_date, session_time, is_booked, user_id')
+      .eq('user_id', user.id)
+      .order('session_date', { ascending: true });
+
+    if (!isMounted) return;
+    if (error) {
+      Alert.alert('Error', 'Could not retrieve your schedule history.');
+    } else if (data) {
+      setMySchedule(data as Appointment[]);
+    }
+  }
+  setLoading(false);
+}
 
   const handleSelectDay = (dateString: string): void => {
   if (dateString < todayString) return;
