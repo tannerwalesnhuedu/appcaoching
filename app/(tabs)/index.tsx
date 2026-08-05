@@ -268,7 +268,7 @@ onPress={() => handleCancelAppointment(upcomingSessions[0].id)}
     <Ionicons name="calendar-outline" size={32} color="#94a3b8" />
     <Text style={styles.emptySessionText}>No upcoming coaching sessions locked into production pipelines.</Text>
   </View>
-)};
+)}
 
       {/* Remaining Timeline */} 
       {upcomingSessions.length > 1 && ( 
