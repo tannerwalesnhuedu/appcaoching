@@ -135,26 +135,24 @@ useEffect(() => {
   setLoading(false);
 }
 
-  const handleSelectDay = (dateString: string): void => {
+ const handleSelectDay = (dateString: string): void => {
   if (dateString < todayString) return;
 
+  // Scan slots matching this day and strictly enforce booking checks
   const dayMatches: Appointment[] = allSlots.filter((slot: Appointment) => {
-    try {
-      return new Date(slot.session_date).toDateString() === new Date(dateString).toDateString();
-    } catch {
-      return slot.session_date === dateString;
-    }
+    const dateMatches = slot.session_date === dateString;
+    // 💡 FRONTEND GATEKEEPER: Ensure the appointment slot is explicitly marked unbooked
+    return dateMatches && !slot.is_booked; 
   });
 
-  // 💡 SILENT LOCK: Instead of an annoying popup alert, simply exit immediately.
-  // The UI will already show this day is disabled.
   if (dayMatches.length === 0) {
-    return; 
+    return; // Silently ignore clicks on locked or booked dates
   }
 
   setFilteredSlots(dayMatches);
   setSelectedDate(dateString);
 };
+
 
      const getMarkedDates = (): Record<string, any> => { 
     const marked: Record<string, any> = {}; 
