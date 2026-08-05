@@ -132,32 +132,26 @@ useEffect(() => {
     setLoading(false); 
   } 
 
-  // --- PASTE THIS IN PLACE OF LINES 111-116 ---
   const handleSelectDay = (dateString: string): void => {
-    // 1. Instantly reject any past date interaction clicks
-    if (dateString < todayString) return;
+  if (dateString < todayString) return;
 
-    // 2. Scan your active array to see if any real slots exist for this date
-    const dayMatches: Appointment[] = allSlots.filter((slot: Appointment) => {
-      try {
-        return new Date(slot.session_date).toDateString() === new Date(dateString).toDateString();
-      } catch {
-        return slot.session_date === dateString;
-      }
-    });
-
-    // 💡 SECURITY VALIDATION LOCK: If an empty day is clicked, throw an alert and block execution
-    if (dayMatches.length === 0) {
-      Alert.alert("Scheduling Lockout", "There are no open coaching sessions listed for this date.");
-      setSelectedDate(''); // Forces the state to clear so the modal window cannot open
-      return;
+  const dayMatches: Appointment[] = allSlots.filter((slot: Appointment) => {
+    try {
+      return new Date(slot.session_date).toDateString() === new Date(dateString).toDateString();
+    } catch {
+      return slot.session_date === dateString;
     }
+  });
 
-    // 3. Safe to proceed: mount data state variables and slide up the scrollable popup window
-    setFilteredSlots(dayMatches);
-    setSelectedDate(dateString);
-  };
+  // 💡 SILENT LOCK: Instead of an annoying popup alert, simply exit immediately.
+  // The UI will already show this day is disabled.
+  if (dayMatches.length === 0) {
+    return; 
+  }
 
+  setFilteredSlots(dayMatches);
+  setSelectedDate(dateString);
+};
 
      const getMarkedDates = (): Record<string, any> => { 
     const marked: Record<string, any> = {}; 
