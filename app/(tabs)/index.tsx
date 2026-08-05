@@ -278,7 +278,7 @@ onPress={() => handleCancelAppointment(upcomingSessions[0].id)}
         </View> 
       )} 
     </ScrollView> 
-  ); 
+  )
 } 
 
 const styles = StyleSheet.create({ 
