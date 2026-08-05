@@ -162,37 +162,34 @@ useEffect(() => {
      const getMarkedDates = (): Record<string, any> => { 
     const marked: Record<string, any> = {}; 
     
-    allSlots.forEach((slot: Appointment) => { 
-      if (!slot.is_booked && slot.session_date >= todayString) { 
-        // 🌟 INDUSTRY STANDARD: Combines the indicator dot with clear, bold blue text coloring
-        marked[slot.session_date] = { 
-          marked: true, 
-          dotColor: '#007AFF',
-          customStyles: {
-            text: { 
-              color: '#007AFF', 
-              fontWeight: '750' 
-            }
-          }
-        }; 
-      } 
-    }); 
-    
-    if (selectedDate) { 
-      marked[selectedDate] = { 
-        ...marked[selectedDate], 
-        selected: true, 
-        selectedColor: '#007AFF',
+     // 1. First, find all future, unbooked slots and mark them as active/enabled
+  allSlots.forEach((slot: Appointment) => {
+    if (!slot.is_booked && slot.session_date >= todayString) {
+      marked[slot.session_date] = {
+        marked: true,
+        disabled: false, // 💡 FORCE ENABLE: Keeps these specific slots clickable
+        dotColor: '#007AFF',
         customStyles: {
-          text: { 
-            color: '#ffffff', // Ensures the text numbers invert cleanly to white when clicked
-            fontWeight: '750' 
-          }
+          text: { color: '#007AFF', fontWeight: '750' }
         }
-      }; 
-    } 
-    return marked; 
-  }; 
+      };
+    }
+  });
+
+  // 2. Keep the selected day styling if it matches a valid slot
+  if (selectedDate && marked[selectedDate]) {
+    marked[selectedDate] = {
+      ...marked[selectedDate],
+      selected: true,
+      selectedColor: '#007AFF',
+      customStyles: {
+        text: { color: '#ffffff', fontWeight: '750' }
+      }
+    };
+  }
+
+  return marked;
+};
 
 
 
