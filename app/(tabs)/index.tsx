@@ -25,57 +25,20 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
   const router = useRouter(); 
   const [user, setUser] = useState<any>(null);
   
-      // Real-time Auth listener handling both client mounting and session tracking
-  useEffect(() => {
-    setIsMounted(true);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        setUser(session.user); // FIXED: Save the user object to state!
-        setUserEmail(session.user.email || 'Valued Client');
-        fetchUserAppointments(session.user.id, true);
-        setLoading(false);
-      } else {
-        setLoading(false);
-        // FIXED: Only redirect after the component has safely mounted to stop Error #418
-        if (isMounted) {
-          router.replace("/login" as any);
-        }
-      }
-    });
-
-    // Clean up the active listener when the user leaves the home screen
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [isMounted]); // Added isMounted dependency here to ensure safe redirection
-
-
-  // 2. CORE DATABASE CALL IMPLEMENTATION
    const fetchUserAppointments = async (userId: string, showLoading = false) => {
     if (showLoading) setLoading(true);
-    
     try {
-      // 💡 INDUSTRY STANDARD: Explicit table column selection with ordered date limits
       const { data, error } = await supabase
-        .from('appointments') // Ensure this matches your exact Supabase table name
+        .from('appointments')
         .select('id, session_date, session_time, is_booked')
-        .eq('user_id', userId) // Connects to the logged in user profile ID context
-        .gte('session_date', new Date().toISOString().split('T')[0]) // Only fetch future dates
+        .eq('user_id', userId)
+        .gte('session_date', new Date().toISOString().split('T')[0])
         .order('session_date', { ascending: true })
-        .limit(1); // Grabs the single closest upcoming window record
+        .limit(1);
 
       if (error) throw error;
-
       if (data && data.length > 0) {
-        const nextAppointment = data[0];
-        
-        // 1. Update your "Your Next Appointment" card layout states
-        setUpcomingSessions([nextAppointment]); 
-        
-        // 2. Update your total count badge (Total Sessions counter card)
-        // If you have a separate counter state, calculate total rows:
-        // setTotalSessionsCount(data.length);
+        setUpcomingSessions([data[0]]);
       } else {
         setUpcomingSessions([]);
       }
@@ -86,23 +49,73 @@ const [appointments, setAppointments] = useState<Appointment[]>([]);
     }
   };
 
-  // 4. LOADING MASK VIEW SWITCH
-  if (loading) { 
-    return ( 
-      <View style={styles.center}> 
-        <ActivityIndicator size="large" color="#2b1a9e" /> 
-        <Text style={styles.loadingText}>Syncing personalized dashboard records securely...</Text> 
-      </View> 
-    ); 
-  } 
+  // 3. AUTH LISTENER
+  useEffect(() => {
+    setIsMounted(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setUser(session.user);
+        setUserEmail(session.user.email || 'Valued Client');
+        fetchUserAppointments(session.user.id, true);
+      } else {
+        setLoading(false);
+        if (isMounted) {
+          router.replace("/login" as any);
+        }
+      }
+    });
 
-  // 5. SECURE SAFE DESTRUCTURING FOR RECORD METRICS
-  const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null; 
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [isMounted]);
 
-// Replace line 91-93 with this:
-if (!isMounted || loading) {
-  return <></>; // This fixes the TypeScript error safely
-}
+  // 4. REALTIME DATABASE SUBSCRIPTION (The secret sauce)
+  useEffect(() => {
+    // Only set up the listener if we have a valid logged-in user
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`user-appointments-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listens to INSERT, UPDATE, and DELETE changes
+          schema: 'public',
+          table: 'appointments',
+          filter: `user_id=eq.${user.id}` // Only triggers for this user's records
+        },
+        (payload) => {
+          console.log('Change received! Refreshing appointments...', payload);
+          // Automatically fetch latest data silently without full-screen loading spinners
+          fetchUserAppointments(user.id, false); 
+        }
+      )
+      .subscribe();
+
+    // Clean up realtime channel when screen unmounts or user logs out
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  // 5. LOADING MASK VIEW SWITCH
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#2b1a9e" />
+        <Text style={styles.loadingText}>Syncing personalized dashboard records securely...</Text>
+      </View>
+    );
+  }
+
+  // 6. SECURE SAFE DESTRUCTURING FOR RECORD METRICS
+  const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
+
+  if (!isMounted || loading) {
+    return <></>;
+  }
+
 
 const handleUserSignOut = async (): Promise<void> => {
   try {
