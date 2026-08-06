@@ -341,31 +341,42 @@ return (
         <View style={{ flex: 1 }}>
           <Text style={styles.subHeader}>Select an active date square to view open available options.</Text>
           <View style={styles.calendarWrapper}>
-            <Calendar 
-            showSixWeeks={true}
-     // 1. Lock the calendar view strictly to the current date
-  current={new Date().toISOString().split('T')[0]}
-  // Hide the navigation arrows completely
-  hideArrows={true}
-  // Prevent the user from choosing a month via swipe gestures
-  disableMonthChange={true}      
-  // 1. Pass your newly adjusted marking configurations
-  markedDates={getMarkedDates()}
-  // 2. This locks down all dates on the calendar by default
-  disabledByDefault={true}
-  // 3. This completely prevents the onPress event from firing on disabled days
-  disableAllTouchEventsForDisabledDays={true}
-    // Optional: Gray out disabled day text numbers even further for clear UI contrast
-              minDate={new Date().toISOString().split('T')[0]} // Prevents looking at past months
-              markingType={'custom'} 
-              onDayPress={(day) => handleSelectDay(day.dateString)} 
-              theme={{ 
-                todayTextColor: '#002b1a', 
-                selectedDayBackgroundColor: '#002b1a', 
-                arrowColor: '#002b1a', 
-                textDisabledColor: '#d9e1e8' 
-              }} 
-            />
+          <Calendar 
+  showSixWeeks={true} 
+  // 1. Lock the calendar view strictly to the current date 
+  current={new Date().toISOString().split('T')[0]} 
+  // Hide the navigation arrows completely 
+  hideArrows={true} 
+  // Prevent the user from choosing a month via swipe gestures 
+  disableMonthChange={true} 
+  // 1. Pass your newly adjusted marking configurations 
+  markedDates={getMarkedDates()} 
+  // 2. This locks down all dates on the calendar by default 
+  disabledByDefault={true} 
+  // 3. This completely prevents the onPress event from firing on disabled days 
+  disableAllTouchEventsForDisabledDays={true} 
+  // Optional: Gray out disabled day text numbers even further for clear UI contrast 
+  minDate={new Date().toISOString().split('T')[0]} // Prevents looking at past months 
+  markingType={'custom'} 
+  onDayPress={(day) => {
+    // Industry standard software guard check matching your updated function
+    const targetDateConfig = getMarkedDates()[day.dateString];
+    if (targetDateConfig && targetDateConfig.disabled) {
+      return; 
+    }
+    handleSelectDay(day.dateString);
+  }} 
+  theme={{ 
+    // Remove the default background highlight circle for the current day
+    todayBackgroundColor: 'transparent',
+    // Set today's text color to match your standard disabled text color (#d9e1e8)
+    // so it doesn't stand out if it hasn't been explicitly enabled by your slots loop
+    todayTextColor: '#d9e1e8', 
+    selectedDayBackgroundColor: '#002b1a', 
+    arrowColor: '#002b1a', 
+    textDisabledColor: '#d9e1e8' 
+  }} 
+/>
           </View>
 
           {/* 🌟 SCROLLABLE POPUP MODAL DIALOG OVERLAY */}
