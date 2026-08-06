@@ -153,16 +153,22 @@ useEffect(() => {
   setSelectedDate(dateString);
 };
 
+// Replace 'supabase' with the name of your imported Supabase client instance
+// Standard Supabase v2 synchronous user lookup via internal state memory
+const currentUserId = (supabase.auth as any).currentSession?.user?.id;
+// OR for newer Supabase v2:
+// const currentUserId = session?.user?.id; 
 
-     const getMarkedDates = (): Record<string, any> => { 
-    const marked: Record<string, any> = {}; 
-    
-     // 1. First, find all future, unbooked slots and mark them as active/enabled
+
+   const getMarkedDates = (): Record<string, any> => {
+  const marked: Record<string, any> = {}; 
+
+  // 1. First, find all future, unbooked slots and mark them as active/enabled
   allSlots.forEach((slot: Appointment) => {
     if (!slot.is_booked && slot.session_date >= todayString) {
       marked[slot.session_date] = {
         marked: true,
-        disabled: false, // 💡 FORCE ENABLE: Keeps these specific slots clickable
+        disabled: false, 
         dotColor: '#007AFF',
         customStyles: {
           text: { color: '#007AFF', fontWeight: '750' }
@@ -183,8 +189,23 @@ useEffect(() => {
     };
   }
 
+  // 3. Gray-out loop placed at the very end so it acts as the final override
+  allSlots.forEach((slot: Appointment) => {
+    if (slot.is_booked && slot.user_id === currentUserId) {
+      marked[slot.session_date] = {
+        disabled: true,               // Disables calendar interactive states
+        disableTouchEvent: true,      // Tells the library to ignore taps
+        customStyles: {
+          container: { backgroundColor: '#f0f0f0', borderRadius: 20 }, // Gray background
+          text: { color: '#d9e1e8', decorationLine: 'line-through' }   // Muted + strike-through text
+        }
+      };
+    }
+  });
+
   return marked;
 };
+
 
 
 
