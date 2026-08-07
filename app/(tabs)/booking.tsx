@@ -16,15 +16,15 @@ import { supabase } from '../../lib/supabase/index';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 
-interface Appointment {
-  price: any; 
-  id: string; 
-  session_date: string; 
-  session_time: string; 
-  is_booked: boolean; 
-  user_id?: string; 
+export interface Appointment {
+  id: string;
+  session_timestamp: string; // 💡 Updated to match your new backend column
+  is_booked: boolean;
+  user_id: string | null;
+  price?: number;
   client_email?: string;
-} 
+}
+
 
 // Stabilized date string parsing structure
 const todayString: string = new Date().toISOString().split('T')[0];
@@ -93,7 +93,7 @@ useEffect(() => {
 }, [checkingAuth]); // Re-runs safely whenever checkingAuth updates
 
 
-  async function fetchData(isMounted: boolean): Promise<void> {
+ async function fetchData(isMounted: boolean): Promise<void> {
   setLoading(true);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
@@ -101,31 +101,39 @@ useEffect(() => {
   if (activeTab === 'book') {
     const { data, error } = await supabase
       .from('appointments')
-      .select('id, session_date, session_time, is_booked, user_id, price')
-      // 💡 THE CRITICAL SECURITY FIX: Never send already booked appointments to the browser calendar grid!
-      .eq('is_booked', false) 
-      .order('session_time', { ascending: true });
+      // 💡 Clean backend structure: selecting the unified timestamp
+      .select('id, session_timestamp, is_booked, user_id, price') 
+      .eq('is_booked', false)
+      // 💡 Native chronologic ordering directly from Postgres
+      .order('session_timestamp', { ascending: true });
 
     if (!isMounted) return;
+
     if (error) {
       Alert.alert('Database Error', 'Could not read available calendar openings.');
     } else if (data) {
-      setAllSlots(data as Appointment[]);
+      const typedData = data as Appointment[];
+      setAllSlots(typedData);
+      
       if (selectedDate) {
         setFilteredSlots(
-          (data as Appointment[]).filter((slot) => slot.session_date === selectedDate)
+          typedData.filter((slot) => {
+            // Converts the UTC timestamp safely to a YYYY-MM-DD string matching your device
+            const slotDateStr = new Date(slot.session_timestamp).toISOString().split('T')[0];
+            return slotDateStr === selectedDate;
+          })
         );
       }
     }
   } else {
-    // Keep your "My Schedule" tab logic identical (this should display user's booked items)
     const { data, error } = await supabase
       .from('appointments')
-      .select('id, session_date, session_time, is_booked, user_id')
+      .select('id, session_timestamp, is_booked, user_id')
       .eq('user_id', user.id)
-      .order('session_date', { ascending: true });
+      .order('session_timestamp', { ascending: true });
 
     if (!isMounted) return;
+
     if (error) {
       Alert.alert('Error', 'Could not retrieve your schedule history.');
     } else if (data) {
@@ -135,23 +143,23 @@ useEffect(() => {
   setLoading(false);
 }
 
- const handleSelectDay = (dateString: string): void => {
+const handleSelectDay = (dateString: string): void => {
   if (dateString < todayString) return;
 
-  // Scan slots matching this day and strictly enforce booking checks
   const dayMatches: Appointment[] = allSlots.filter((slot: Appointment) => {
-    const dateMatches = slot.session_date === dateString;
-    // 💡 FRONTEND GATEKEEPER: Ensure the appointment slot is explicitly marked unbooked
-    return dateMatches && !slot.is_booked; 
+    // 💡 Pulls date component out securely to check calendar box matching
+    const slotDateStr = new Date(slot.session_timestamp).toISOString().split('T')[0];
+    const dateMatches = slotDateStr === dateString;
+    return dateMatches && !slot.is_booked;
   });
 
   if (dayMatches.length === 0) {
-    return; // Silently ignore clicks on locked or booked dates
+    return; 
   }
-
   setFilteredSlots(dayMatches);
   setSelectedDate(dateString);
 };
+
 
 // Replace 'supabase' with the name of your imported Supabase client instance
 // Standard Supabase v2 synchronous user lookup via internal state memory
@@ -159,16 +167,17 @@ const currentUserId = (supabase.auth as any).currentSession?.user?.id;
 // OR for newer Supabase v2:
 // const currentUserId = session?.user?.id; 
 
+const getMarkedDates = (): Record<string, any> => {
+  const marked: Record<string, any> = {};
 
-   const getMarkedDates = (): Record<string, any> => {
-  const marked: Record<string, any> = {}; 
-
-  // 1. First, find all future, unbooked slots and mark them as active/enabled
   allSlots.forEach((slot: Appointment) => {
-    if (!slot.is_booked && slot.session_date >= todayString) {
-      marked[slot.session_date] = {
+    // 💡 Read the date portion (YYYY-MM-DD) out of the timezone timestamp safely
+    const slotDateStr = new Date(slot.session_timestamp).toISOString().split('T')[0];
+
+    if (!slot.is_booked && slotDateStr >= todayString) {
+      marked[slotDateStr] = {
         marked: true,
-        disabled: false, 
+        disabled: false,
         dotColor: '#007AFF',
         customStyles: {
           text: { color: '#007AFF', fontWeight: '750' }
@@ -177,7 +186,6 @@ const currentUserId = (supabase.auth as any).currentSession?.user?.id;
     }
   });
 
-  // 2. Keep the selected day styling if it matches a valid slot
   if (selectedDate && marked[selectedDate]) {
     marked[selectedDate] = {
       ...marked[selectedDate],
@@ -188,76 +196,70 @@ const currentUserId = (supabase.auth as any).currentSession?.user?.id;
       }
     };
   }
-
-  // 3. Gray-out loop placed at the very end so it acts as the final override
-  allSlots.forEach((slot: Appointment) => {
-    if (slot.is_booked && slot.user_id === currentUserId) {
-      marked[slot.session_date] = {
-        disabled: true,               // Disables calendar interactive states
-        disableTouchEvent: true,      // Tells the library to ignore taps
-        customStyles: {
-          container: { backgroundColor: '#f0f0f0', borderRadius: 20 }, // Gray background
-          text: { color: '#d9e1e8', decorationLine: 'line-through' }   // Muted + strike-through text
-        }
-      };
-    }
-  });
-
   return marked;
 };
 
 
 
+async function bookSession(slotId: string, item: Appointment): Promise<void> {
+  setSubmitting(true);
 
-    async function bookSession(slotId: string, date: string, time: string, price: any): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return Alert.alert('Authentication', 'Session expired. Please sign back in.');
-
-    // 💡 FRONTEND OVERLAP PROTECTION: Define session length (e.g., 60 minutes)
-    const sessionDurationMinutes = 60;
-    const requestedStart = new Date(`${date} ${time}`);
-    const requestedEnd = new Date(requestedStart.getTime() + sessionDurationMinutes * 60000);
-
-    // Scan your locally saved upcoming schedule rows for any confirmed overlaps
-    const hasOverlap = mySchedule.some((appointment) => {
-      try {
-        const existingStart = new Date(`${appointment.session_date} ${appointment.session_time}`);
-        const existingEnd = new Date(existingStart.getTime() + sessionDurationMinutes * 60000);
-        // Standard mathematical overlap boundary evaluation formula
-        return requestedStart < existingEnd && requestedEnd > existingStart;
-      } catch {
-        return false;
-      }
-    });
-
-    if (hasOverlap) {
-      Alert.alert(
-        'Scheduling Conflict',
-        'You already have an appointment scheduled that overlaps with this time window. Please pick a different slot.'
-      );
-      return;
-    }
-
-    setSubmitting(true);
-
-    const { data: success, error } = await supabase.rpc('secure_reserve_appointment', {
-      target_slot_id: slotId,
-      target_user_id: user.id,
-      target_user_email: user.email,
-      price: price
-    });
-    
-
-    if (error || !success) {
-      Alert.alert('Booking Conflict', 'This specific session window was just claimed by another client.');
-      setSubmitting(false);
-    } else {
-      setConfirmedDetails({ id: slotId, session_date: date, session_time: time, is_booked: true, price: price });
-      setAllSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId));
-      setFilteredSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId));
-      setSubmitting(false);
-    }
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // 💡 FIX: Return early if user is null to satisfy TypeScript safety guards
+  if (!user) {
+    Alert.alert('Authentication', 'Session expired. Please sign back in.');
+    setSubmitting(false);
+    return;
   }
+
+  // FRONTEND OVERLAP PROTECTION: Define session length (e.g., 60 minutes)
+  const sessionDurationMinutes = 60;
+  const requestedStart = new Date(item.session_timestamp);
+  const requestedEnd = new Date(requestedStart.getTime() + sessionDurationMinutes * 60000);
+
+  const hasOverlap = mySchedule.some((appointment: Appointment) => {
+    try {
+      const existingStart = new Date(appointment.session_timestamp);
+      const existingEnd = new Date(existingStart.getTime() + sessionDurationMinutes * 60000);
+      return requestedStart < existingEnd && requestedEnd > existingStart;
+    } catch {
+      return false;
+    }
+  });
+
+  if (hasOverlap) {
+    Alert.alert('Scheduling Conflict', 'You already have an appointment scheduled that overlaps with this time window.');
+    setSubmitting(false);
+    return;
+  }
+
+  const { data: success, error: supabaseError } = await supabase.rpc('secure_reserve_appointment', {
+    target_slot_id: slotId,
+    target_user_id: user.id,
+    target_user_email: user.email,
+    price: Number(item.price || 150)
+  });
+
+  if (supabaseError || !success) {
+    Alert.alert('Booking Conflict', 'This specific session window was just claimed by another client.');
+    setSubmitting(false);
+  } else {
+    setConfirmedDetails({
+      id: slotId,
+      session_timestamp: item.session_timestamp,
+      is_booked: true,
+      user_id: user.id,
+      price: Number(item.price || 150)
+    });
+
+    setAllSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId));
+    setFilteredSlots((prev: Appointment[]) => prev.filter((slot: Appointment) => slot.id !== slotId));
+    setSubmitting(false);
+  }
+}
+
+
 
 async function handleSignOut(): Promise<void> {
   try {
@@ -279,48 +281,55 @@ async function handleSignOut(): Promise<void> {
   } 
 
   // --- PASTE THIS IN EXACTLY AT LINE 197 ---
-  const processedSlots = filteredSlots.filter((item: Appointment) => {
-    if (!selectedDate) return false;
-    try {
-      const selectedFormatted = new Date(selectedDate).toDateString();
-      const itemFormatted = new Date(item.session_date).toDateString();
-      return selectedFormatted === itemFormatted;
-    } catch {
-      return item.session_date === selectedDate;
-    }
-  });
+const processedSlots = filteredSlots.filter((item: Appointment) => {
+  if (!selectedDate) return false;
+  try {
+    // 💡 Extracts '2026-08-07' out of your database session_timestamp string safely
+    const itemDateStr = new Date(item.session_timestamp).toISOString().split('T')[0];
+    return selectedDate === itemDateStr;
+  } catch {
+    return false;
+  }
+});
+
 
   if (confirmedDetails) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.successCard}>
-          <View style={styles.successIconBubble}>
-            <Text style={styles.successIconText}>✓</Text>
-          </View>
-          <Text style={styles.successTitle}>Reservation Confirmed!</Text>
-          <Text style={styles.successSubtitle}>Your session parameter records have been successfully added to production.</Text>
+  // 💡 Compute clean human-readable displays from the single database string
+  const confirmedDateDisplay = new Date(confirmedDetails.session_timestamp).toLocaleDateString([], {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+  });
+  const confirmedTimeDisplay = new Date(confirmedDetails.session_timestamp).toLocaleTimeString([], {
+    hour: 'numeric', minute: '2-digit'
+  });
 
-          <View style={styles.receiptContainer}>
-            <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Selected Date:</Text><Text style={styles.receiptVal}>{confirmedDetails.session_date}</Text></View>
-            <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Time Window:</Text><Text style={styles.receiptVal}>{confirmedDetails.session_time}</Text></View>
-            <View style={[styles.receiptRow, styles.receiptTotalRow]}>
-              <Text style={styles.receiptTotalLabel}>Amount Charged:</Text>
-              <Text style={styles.receiptTotalValue}>$150.00</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.primaryActionBtn} onPress={() => { setConfirmedDetails(null); setSelectedDate(''); } }>
-            <Text style={styles.primaryActionText}>Return to Booking Interface</Text>
-           </TouchableOpacity>
+  return (
+    <View style={styles.container}>
+      <View style={styles.successCard}>
+        <View style={styles.successIconBubble}>
+          <Text style={styles.successIconText}>✓</Text>
         </View>
+        <Text style={styles.successTitle}>Reservation Confirmed!</Text>
+        <Text style={styles.successSubtitle}>Your session parameter records have been successfully added to production.</Text>
+        <View style={styles.receiptContainer}>
+          {/* 💡 Updated display strings using the computed layout markers */}
+          <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Selected Date:</Text><Text style={styles.receiptVal}>{confirmedDateDisplay}</Text></View> 
+          <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Time Window:</Text><Text style={styles.receiptVal}>{confirmedTimeDisplay}</Text></View> 
+          <View style={[styles.receiptRow, styles.receiptTotalRow]}>
+            <Text style={styles.receiptTotalLabel}>Amount Charged:</Text>
+            <Text style={styles.receiptTotalValue}>$150.00</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.primaryActionBtn} onPress={() => { setConfirmedDetails(null); setSelectedDate(''); } }>
+          <Text style={styles.primaryActionText}>Return to Booking Interface</Text>
+        </TouchableOpacity>
       </View>
-    );
-  }
+    </View>
+  );
+}
 // --- PASTE THIS STARTING AT LINE 267 TO REPLACE THE REST OF THE FILE ---
 return (
   <View style={styles.container}>
     <View style={styles.centeredContentWrapper}>
-      
       <View style={styles.headerRow}>
         <Text style={styles.header}>Booking</Text>
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
@@ -341,55 +350,36 @@ return (
         <View style={{ flex: 1 }}>
           <Text style={styles.subHeader}>Select an active date square to view open available options.</Text>
           <View style={styles.calendarWrapper}>
-          <Calendar 
-  showSixWeeks={true} 
-  // 1. Lock the calendar view strictly to the current date 
-  current={new Date().toISOString().split('T')[0]} 
-  // Hide the navigation arrows completely 
-  hideArrows={true} 
-  // Prevent the user from choosing a month via swipe gestures 
-  disableMonthChange={true} 
-  // 1. Pass your newly adjusted marking configurations 
-  markedDates={getMarkedDates()} 
-  // 2. This locks down all dates on the calendar by default 
-  disabledByDefault={true} 
-  // 3. This completely prevents the onPress event from firing on disabled days 
-  disableAllTouchEventsForDisabledDays={true} 
-  // Optional: Gray out disabled day text numbers even further for clear UI contrast 
-  minDate={new Date().toISOString().split('T')[0]} // Prevents looking at past months 
-  markingType={'custom'} 
-  onDayPress={(day) => {
-    // Industry standard software guard check matching your updated function
-    const targetDateConfig = getMarkedDates()[day.dateString];
-    if (targetDateConfig && targetDateConfig.disabled) {
-      return; 
-    }
-    handleSelectDay(day.dateString);
-  }} 
-  theme={{ 
-    // Remove the default background highlight circle for the current day
-    todayBackgroundColor: 'transparent',
-    // Set today's text color to match your standard disabled text color (#d9e1e8)
-    // so it doesn't stand out if it hasn't been explicitly enabled by your slots loop
-    todayTextColor: '#d9e1e8', 
-    selectedDayBackgroundColor: '#002b1a', 
-    arrowColor: '#002b1a', 
-    textDisabledColor: '#d9e1e8' 
-  }} 
-/>
+            <Calendar
+              showSixWeeks={true}
+              current={new Date().toISOString().split('T')[0]}
+              hideArrows={true}
+              disableMonthChange={true}
+              markedDates={getMarkedDates()}
+              disabledByDefault={true}
+              disableAllTouchEventsForDisabledDays={true}
+              minDate={new Date().toISOString().split('T')[0]}
+              markingType={'custom'}
+              onDayPress={(day) => {
+                const targetDateConfig = getMarkedDates()[day.dateString];
+                if (targetDateConfig && targetDateConfig.disabled) {
+                  return;
+                }
+                handleSelectDay(day.dateString);
+              }}
+              theme={{
+                todayBackgroundColor: 'transparent',
+                todayTextColor: '#d9e1e8',
+                selectedDayBackgroundColor: '#002b1a',
+                arrowColor: '#002b1a',
+                textDisabledColor: '#d9e1e8'
+              }}
+            />
           </View>
 
-          {/* 🌟 SCROLLABLE POPUP MODAL DIALOG OVERLAY */}
-          <Modal
-            animationType="fade"
-            transparent={true}
-            visible={!!selectedDate}
-            onRequestClose={() => setSelectedDate('')}
-          >
+          <Modal animationType="fade" transparent={true} visible={!!selectedDate} onRequestClose={() => setSelectedDate('')} >
             <View style={styles.modalOverlayScrim}>
               <View style={styles.modalCardContainer}>
-                
-                {/* Modal Title Banner */}
                 <View style={styles.modalHeaderRow}>
                   <View>
                     <Text style={styles.modalTitleText}>Available Slots</Text>
@@ -400,64 +390,56 @@ return (
                   </TouchableOpacity>
                 </View>
 
-                {/* Securely Scrollable Interactive List Box */}
                 {processedSlots.length === 0 ? (
                   <View style={styles.modalEmptyStateBox}>
                     <Text style={styles.noSlotsText}></Text>
                   </View>
                 ) : (
-                  // app/(tabs)/booking.tsx ➔ Inside your Modal's FlatList component, update the renderItem:
-<FlatList 
-  data={processedSlots} 
-  keyExtractor={(item: Appointment) => item.id}
-  style={styles.modalScrollableWindow}
-  showsVerticalScrollIndicator={true}
-  renderItem={({ item }: { item: Appointment }) => (
-    <View style={styles.slotCard}>
-      <View style={styles.slotDetails}>
-        {/* Time Window Indicator */}
-        <View style={styles.timeBadge}>
-          <Text style={styles.timeBadgeText}>{item.session_time}</Text>
-        </View>
-        
-        {/* 💵 NEW: Industry Standard Price Display */}
-        <View style={styles.priceContainer}>
-          <Text style={styles.priceLabelText}>
-            {item.price ? `$${item.price}.00` : '150.00'}
-          </Text>
-        </View>
-      </View>
-
-      <TouchableOpacity 
-        style={styles.bookButton} 
-        disabled={submitting} 
-        onPress={() => {
-          // 1. Block booking if the user token or profile is missing
-  if (!user) {
-    // Navigate them to your authentication screen
-    router.push('/login' as any); 
-    return;
-  }
-
-           // 2. Clear booking function execution
-    bookSession(item.id, item.session_date, item.session_time, Number(item.price));
-    setSelectedDate('');
-        }} 
-      >
-        <Text style={styles.bookButtonText}>Reserve</Text>
-      </TouchableOpacity>
-    </View>
-  )} 
-/>
-
+                  <FlatList
+                    data={processedSlots}
+                    keyExtractor={(item: Appointment) => item.id}
+                    style={styles.modalScrollableWindow}
+                    showsVerticalScrollIndicator={true}
+                    renderItem={({ item }: { item: Appointment }) => {
+                      // 💡 Format timestamp dynamically for user local view layout display
+                      const displayTime = new Date(item.session_timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                      
+                      return (
+                        <View style={styles.slotCard}>
+                          <View style={styles.slotDetails}>
+                            <View style={styles.timeBadge}>
+                              <Text style={styles.timeBadgeText}>{displayTime}</Text>
+                            </View>
+                            <View style={styles.priceContainer}>
+                              <Text style={styles.priceLabelText}>
+                                {item.price ? `$${item.price}.00` : '150.00'}
+                              </Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.bookButton}
+                            disabled={submitting}
+                           onPress={() => {
+                            if (!user) {
+                                router.push('/login' as any);
+                                  return;
+                                }
+                            // 💡 Explicitly pass both the string id and full model reference object
+                            bookSession(item.id, item);
+                            setSelectedDate('');
+                        }}
+                          >
+                            <Text style={styles.bookButtonText}>Reserve</Text>
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    }}
+                  />
                 )}
               </View>
             </View>
           </Modal>
-
-          {!selectedDate && (
-            <Text style={styles.promptText}></Text>
-          )}
+          {!selectedDate && ( <Text style={styles.promptText}></Text> )}
         </View>
       ) : (
         <View style={{ flex: 1 }}>
@@ -467,22 +449,28 @@ return (
               <Text style={styles.noSlotsText}>You have no reserved time slots scheduled.</Text>
             </View>
           ) : (
-            <FlatList 
-              data={mySchedule} 
-              keyExtractor={(item: Appointment) => item.id} 
-              renderItem={({ item }: { item: Appointment }) => (
-                <View style={styles.slotCard}>
-                  <View style={styles.slotDetails}>
-                    <View style={[styles.timeBadge, { backgroundColor: '#e6f4ea' }]}>
-                      <Text style={[styles.timeBadgeText, { color: '#137333' }]}>{item.session_time}</Text>
+            <FlatList
+              data={mySchedule}
+              keyExtractor={(item: Appointment) => item.id}
+              renderItem={({ item }: { item: Appointment }) => {
+                // 💡 Extract both local text representations safely for your history grid cards
+                const displayDate = new Date(item.session_timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                const displayTime = new Date(item.session_timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+                return (
+                  <View style={styles.slotCard}>
+                    <View style={styles.slotDetails}>
+                      <View style={[styles.timeBadge, { backgroundColor: '#e6f4ea' }]}>
+                        <Text style={[styles.timeBadgeText, { color: '#137333' }]}>{displayTime}</Text>
+                      </View>
+                      <Text style={styles.dateLabelText}>{displayDate}</Text>
                     </View>
-                    <Text style={styles.dateLabelText}>{item.session_date}</Text>
+                    <View style={styles.statusBadge}>
+                      <Text style={styles.statusBadgeText}>Secured</Text>
+                    </View>
                   </View>
-                  <View style={styles.statusBadge}>
-                    <Text style={styles.statusBadgeText}>Secured</Text>
-                  </View>
-                </View>
-              )} 
+                );
+              }}
             />
           )}
         </View>
@@ -491,6 +479,7 @@ return (
   </View>
 );
 }
+
 
 // 🎨 COMPREHENSIVE RESPONSIVE STYLES CONTAINER MAPPED BELOW
 const styles = StyleSheet.create({
