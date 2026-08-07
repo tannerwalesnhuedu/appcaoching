@@ -264,8 +264,14 @@ const nextSessionDateDisplay = nextSession
                 scrollEnabled={false} 
                 keyExtractor={(item) => item.id} 
                 renderItem={({ item }: { item: Appointment }) => {
-                  const rowDate = new Date(item.session_timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
-                  const rowTime = new Date(item.session_timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                    // Ensure the timestamp string is evaluated as true UTC before local display conversion
+                  // 💡 Ensure the complete string literal suffix is fully typed out at the end
+const utcString = item.session_timestamp.endsWith('Z') 
+  ? item.session_timestamp 
+  : `${item.session_timestamp}Z`;
+
+                  const rowDate = new Date(utcString).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                  const rowTime = new Date(utcString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
                   
                   return (
                     <View style={styles.timelineRowCard}>
