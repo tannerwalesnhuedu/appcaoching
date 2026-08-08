@@ -24,33 +24,33 @@ export default function HomeScreen(): React.JSX.Element {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
 
-  // 💡 FIX 2: Updated query to fetch session_timestamp and use current timestamp boundaries natively
   const fetchUserAppointments = async (userId: string, showLoading = false) => {
-    if (showLoading) setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('appointments')
-        // Pulling the optimized timestamptz column
-        .select('id, session_timestamp, is_booked, price')
-        .eq('user_id', userId)
-        // Only fetch items happening from this exact moment forward
-        .gte('session_timestamp', new Date().toISOString())
-        .order('session_timestamp', { ascending: true })
-        .limit(1);
+  if (showLoading) setLoading(true);
+  try {
+    // 💡 INDUSTRY STANDARD: Set boundary to midnight today local time
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        setUpcomingSessions(data as Appointment[]);
-      } else {
-        setUpcomingSessions([]);
-      }
-    } catch (err) {
-      console.error("Error fetching homepage dashboard stats:", err);
-    } finally {
-      setLoading(false);
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, session_timestamp, is_booked, price')
+      .eq('user_id', userId)
+      // 💡 Pulls everything from midnight today onward so tonight's slots show up
+      .gte('session_timestamp', startOfToday.toISOString())
+      .order('session_timestamp', { ascending: true });
+
+    if (error) throw error;
+    
+    if (data) {
+      setUpcomingSessions(data as Appointment[]);
     }
-  };
+  } catch (err) {
+    console.error("Error fetching homepage dashboard stats:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // 3. AUTH LISTENER
   useEffect(() => {
