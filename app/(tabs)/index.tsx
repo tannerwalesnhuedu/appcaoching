@@ -110,21 +110,22 @@ export default function HomeScreen(): React.JSX.Element {
   // 6. SECURE SAFE DESTRUCTURING FOR RECORD METRICS
   const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
 
-// 💡 FIX 3: Append 'Z' to explicitly tell JavaScript this string is UTC. 
-// It will then convert perfectly to whatever local timezone the user's phone has.
+// 💡 FIX: Standardize any spacing format into a clean, universally valid ISO string
 const nextSessionTimeDisplay = nextSession 
-  ? new Date(nextSession.session_timestamp.endsWith('Z') 
-      ? nextSession.session_timestamp 
-      : `${nextSession.session_timestamp}Z`
-    ).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) 
+  ? new Date(nextSession.session_timestamp.replace(' ', 'T')).toLocaleTimeString([], { 
+      hour: 'numeric', 
+      minute: '2-digit' 
+    }) 
   : '--:--';
 
 const nextSessionDateDisplay = nextSession 
-  ? new Date(nextSession.session_timestamp.endsWith('Z') 
-      ? nextSession.session_timestamp 
-      : `${nextSession.session_timestamp}Z`
-    ).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) 
+  ? new Date(nextSession.session_timestamp.replace(' ', 'T')).toLocaleDateString([], { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }) 
   : '';
+
 
 
   if (!isMounted || loading) {
