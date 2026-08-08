@@ -170,21 +170,21 @@ const currentUserId = (supabase.auth as any).currentSession?.user?.id;
 const getMarkedDates = (): Record<string, any> => {
   const marked: Record<string, any> = {};
 
-  allSlots.forEach((slot: Appointment) => {
-    // 💡 Read the date portion (YYYY-MM-DD) out of the timezone timestamp safely
-    const slotDateStr = new Date(slot.session_timestamp).toISOString().split('T')[0];
+  // Inside your booking.tsx getMarkedDates function loop:
+allSlots.forEach((slot: Appointment) => {
+  const cleanIso = slot.session_timestamp.replace(' ', 'T');
+  const slotDateStr = cleanIso.split('T')[0];
 
-    if (!slot.is_booked && slotDateStr >= todayString) {
-      marked[slotDateStr] = {
-        marked: true,
-        disabled: false,
-        dotColor: '#007AFF',
-        customStyles: {
-          text: { color: '#007AFF', fontWeight: '750' }
-        }
-      };
-    }
-  });
+  // 💡 Ensure the slot is explicitly NOT booked before activating it on the grid
+  if (!slot.is_booked) {
+    marked[slotDateStr] = {
+      marked: true,
+      disabled: false,
+      dotColor: '#007AFF',
+      customStyles: { text: { color: '#007AFF', fontWeight: '750' } }
+    };
+  }
+});
 
   if (selectedDate && marked[selectedDate]) {
     marked[selectedDate] = {
@@ -463,24 +463,34 @@ return (
               data={mySchedule}
               keyExtractor={(item: Appointment) => item.id}
               renderItem={({ item }: { item: Appointment }) => {
-                // 💡 Extract both local text representations safely for your history grid cards
-                const displayDate = new Date(item.session_timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-                const displayTime = new Date(item.session_timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  // 💡 FIX: Standardize formatting to prevent native sub-hour day rollbacks
+  const cleanIsoString = item.session_timestamp.replace(' ', 'T');
+  
+  const displayDate = new Date(cleanIsoString).toLocaleDateString([], { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
 
-                return (
-                  <View style={styles.slotCard}>
-                    <View style={styles.slotDetails}>
-                      <View style={[styles.timeBadge, { backgroundColor: '#e6f4ea' }]}>
-                        <Text style={[styles.timeBadgeText, { color: '#137333' }]}>{displayTime}</Text>
-                      </View>
-                      <Text style={styles.dateLabelText}>{displayDate}</Text>
-                    </View>
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusBadgeText}>Secured</Text>
-                    </View>
-                  </View>
-                );
-              }}
+  const displayTime = new Date(cleanIsoString).toLocaleTimeString([], { 
+    hour: 'numeric', 
+    minute: '2-digit' 
+  });
+
+  return (
+    <View style={styles.slotCard}>
+      <View style={styles.slotDetails}>
+        <View style={[styles.timeBadge, { backgroundColor: '#e6f4ea' }]}>
+          <Text style={[styles.timeBadgeText, { color: '#137333' }]}>{displayTime}</Text>
+        </View>
+        <Text style={styles.dateLabelText}>{displayDate}</Text>
+      </View>
+      <View style={styles.statusBadge}>
+        <Text style={styles.statusBadgeText}>Secured</Text>
+      </View>
+    </View>
+  );
+}}
             />
           )}
         </View>

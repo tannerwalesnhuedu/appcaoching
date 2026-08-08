@@ -107,46 +107,41 @@ export default function HomeScreen(): React.JSX.Element {
     );
   }
 
-  // 6. SECURE SAFE DESTRUCTURING FOR RECORD METRICS
+  // --- PLACE ALL THIS EXACTLY ABOVE YOUR MAIN RETURN ( BLOCK ---
+  
+  // 1. Calculate the active upcoming totals
+  const totalActiveSessionsCount = upcomingSessions.length;
   const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
 
-// 💡 PLACE THIS ABOVE YOUR RETURN STATEMENT (AROUND LINES 113-120)
-// 1. Get the raw string segment before any space or 'T' separator (e.g., "2026-08-08")
-const rawDateString = nextSession?.session_timestamp 
-  ? nextSession.session_timestamp.split(/[ T]/)[0] 
-  : '';
+  // 2. Extract the raw date string component cleanly
+  const rawDateString = nextSession?.session_timestamp 
+    ? nextSession.session_timestamp.split(/[ T]/)[0] 
+    : '';
 
-let nextSessionDateDisplay = '';
-if (rawDateString) {
-  // 2. Explicitly split the hyphenated date string component ("2026-08-08" -> ["2026", "08", "08"])
-  const dateParts = rawDateString.split('-');
-  const year = Number(dateParts[0]);
-  const month = Number(dateParts[1]);
-  const day = Number(dateParts[2]);
+  let nextSessionDateDisplay = '';
+  if (rawDateString) {
+    const dateParts = rawDateString.split('-');
+    const year = Number(dateParts[0]);
+    const month = Number(dateParts[1]);
+    const day = Number(dateParts[2]);
 
-  // 3. Instantiate at exact midnight to lock the calendar box from slipping backwards
-  const stableDate = new Date(year, month - 1, day);
-  nextSessionDateDisplay = stableDate.toLocaleDateString([], { 
-    month: 'short', 
-    day: 'numeric', 
-    year: 'numeric' 
-  });
-}
+    // Create date at local midnight to lock the calendar day from slipping backwards
+    const stableDate = new Date(year, month - 1, day);
+    nextSessionDateDisplay = stableDate.toLocaleDateString([], { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  }
 
-// 4. Time display logic handles your local device clock parsing dynamically
-const cleanTimestamp = nextSession?.session_timestamp 
-  ? nextSession.session_timestamp.replace(' ', 'T') 
-  : '';
+  // 3. Parse your local device time window dynamically
+  const cleanTimestamp = nextSession?.session_timestamp 
+    ? nextSession.session_timestamp.replace(' ', 'T') 
+    : '';
 
-const nextSessionTimeDisplay = nextSession && cleanTimestamp
-  ? new Date(cleanTimestamp).toLocaleTimeString([], { 
-      hour: 'numeric', 
-      minute: '2-digit' 
-    }) 
-  : '--:--';
-
-
-
+  const nextSessionTimeDisplay = nextSession && cleanTimestamp
+    ? new Date(cleanTimestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) 
+    : '--:--';
 
   if (!isMounted || loading) {
     return <></>;
