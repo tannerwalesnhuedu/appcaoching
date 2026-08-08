@@ -24,10 +24,10 @@ export default function HomeScreen(): React.JSX.Element {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
 
- const fetchUserAppointments = async (userId: string, showLoading = false) => {
+const fetchUserAppointments = async (userId: string, showLoading = false) => {
   if (showLoading) setLoading(true);
   try {
-    // 💡 FIX: Calculate midnight today in local time, then convert to ISO
+    // 💡 INDUSTRY STANDARD: Set filter boundary to midnight today local time
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
@@ -35,14 +35,21 @@ export default function HomeScreen(): React.JSX.Element {
       .from('appointments')
       .select('id, session_timestamp, is_booked, price')
       .eq('user_id', userId)
-      // 💡 This ensures any slot happening today or later is captured
       .gte('session_timestamp', startOfToday.toISOString())
-      .order('session_timestamp', { ascending: true });
+      .order('session_timestamp', { ascending: true }); // Ordered chronologically
 
     if (error) throw error;
     
     if (data) {
-      setUpcomingSessions(data as Appointment[]);
+      const now = new Date();
+      
+      // 💡 FILTER OUT PASSED SESSIONS: Ensure we only keep slots that are happening now or in the future
+      const activeUpcoming = (data as Appointment[]).filter((slot) => {
+        const cleanIso = slot.session_timestamp.replace(' ', 'T');
+        return new Date(cleanIso) >= now;
+      });
+
+      setUpcomingSessions(activeUpcoming);
     }
   } catch (err) {
     console.error("Error fetching homepage dashboard stats:", err);
@@ -50,7 +57,6 @@ export default function HomeScreen(): React.JSX.Element {
     setLoading(false);
   }
 };
-
 
   // 3. AUTH LISTENER
   useEffect(() => {
@@ -142,9 +148,10 @@ export default function HomeScreen(): React.JSX.Element {
     }
   };
 
-// --- PLACE THIS EXACTLY ABOVE YOUR MAIN RETURN ( BLOCK ---
-const totalActiveSessionsCount = upcomingSessions.length;
+// 💡 Correctly grabs the single closest upcoming appointment row from your filtered data
 const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
+const totalActiveSessionsCount = upcomingSessions.length;
+
 
 // 1. Grab the raw date part safely by accessing index 0 of the split array
 const rawDateString = nextSession?.session_timestamp 
