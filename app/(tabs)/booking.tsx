@@ -462,16 +462,23 @@ return (
             <FlatList
               data={mySchedule}
               keyExtractor={(item: Appointment) => item.id}
-              renderItem={({ item }: { item: Appointment }) => {
-  // 💡 FIX: Standardize formatting to prevent native sub-hour day rollbacks
-  const cleanIsoString = item.session_timestamp.replace(' ', 'T');
-  
-  const displayDate = new Date(cleanIsoString).toLocaleDateString([], { 
+        renderItem={({ item }: { item: Appointment }) => {
+  // 💡 FIX: Isolate the literal date string ("2026-08-08") by grabbing index 0
+  const rawDateStr = item.session_timestamp.split(/[ T]/)[0];
+  const dateParts = rawDateStr.split('-');
+  const year = Number(dateParts[0]);
+  const month = Number(dateParts[1]);
+  const day = Number(dateParts[2]);
+
+  // Force local midnight generation to keep the date locked in place
+  const stableDate = new Date(year, month - 1, day);
+  const displayDate = stableDate.toLocaleDateString([], { 
     month: 'short', 
     day: 'numeric', 
     year: 'numeric' 
   });
 
+  const cleanIsoString = item.session_timestamp.replace(' ', 'T');
   const displayTime = new Date(cleanIsoString).toLocaleTimeString([], { 
     hour: 'numeric', 
     minute: '2-digit' 
@@ -491,6 +498,7 @@ return (
     </View>
   );
 }}
+
             />
           )}
         </View>
