@@ -264,13 +264,16 @@ const nextSessionDateDisplay = nextSession
                 data={upcomingSessions.slice(1)} 
                 scrollEnabled={false} 
                 keyExtractor={(item) => item.id} 
-               renderItem={({ item }: { item: Appointment }) => {
-  // 💡 FIX: Replace spaces with a T token for absolute local timezone parsing
+            renderItem={({ item }: { item: Appointment }) => {
+  const rawDatePart = item.session_timestamp.split(/[ T]/)[0];
+  const [year, month, day] = rawDatePart.split('-');
+  const stableDate = new Date(Number(year), Number(month) - 1, Number(day));
+  
+  const rowDate = stableDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  
   const cleanIsoString = item.session_timestamp.replace(' ', 'T');
-  
-  const rowDate = new Date(cleanIsoString).toLocaleDateString([], { month: 'short', day: 'numeric' });
   const rowTime = new Date(cleanIsoString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  
+
   return (
     <View style={styles.timelineRowCard}>
       <View style={styles.timelineLeftBlock}>

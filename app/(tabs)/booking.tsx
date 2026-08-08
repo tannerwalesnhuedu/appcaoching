@@ -293,14 +293,24 @@ const processedSlots = filteredSlots.filter((item: Appointment) => {
 });
 
 
-  if (confirmedDetails) {
-  // 💡 Compute clean human-readable displays from the single database string
-  const confirmedDateDisplay = new Date(confirmedDetails.session_timestamp).toLocaleDateString([], {
+ if (confirmedDetails) {
+  // 💡 FIX: Split by space or T to grab the literal date ("2026-08-08") completely raw
+  const rawDateStr = confirmedDetails.session_timestamp.split(/[ T]/)[0]; 
+  const [year, month, day] = rawDateStr.split('-');
+
+  // Force creation at local midnight so hour subtractions can't roll the calendar day backward
+  const stableDate = new Date(Number(year), Number(month) - 1, Number(day));
+  
+  const confirmedDateDisplay = stableDate.toLocaleDateString([], {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
   });
-  const confirmedTimeDisplay = new Date(confirmedDetails.session_timestamp).toLocaleTimeString([], {
+
+  // Keep time tracking parsing dynamically from the full string
+  const cleanIsoString = confirmedDetails.session_timestamp.replace(' ', 'T');
+  const confirmedTimeDisplay = new Date(cleanIsoString).toLocaleTimeString([], {
     hour: 'numeric', minute: '2-digit'
   });
+
 
   return (
     <View style={styles.container}>
