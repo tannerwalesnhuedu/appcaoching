@@ -110,21 +110,41 @@ export default function HomeScreen(): React.JSX.Element {
   // 6. SECURE SAFE DESTRUCTURING FOR RECORD METRICS
   const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
 
-// 💡 FIX: Standardize any spacing format into a clean, universally valid ISO string
-const nextSessionTimeDisplay = nextSession 
-  ? new Date(nextSession.session_timestamp.replace(' ', 'T')).toLocaleTimeString([], { 
+// 💡 PLACE THIS ABOVE YOUR RETURN STATEMENT (AROUND LINES 113-120)
+// 1. Get the raw string segment before any space or 'T' separator (e.g., "2026-08-08")
+const rawDateString = nextSession?.session_timestamp 
+  ? nextSession.session_timestamp.split(/[ T]/)[0] 
+  : '';
+
+let nextSessionDateDisplay = '';
+if (rawDateString) {
+  // 2. Explicitly split the hyphenated date string component ("2026-08-08" -> ["2026", "08", "08"])
+  const dateParts = rawDateString.split('-');
+  const year = Number(dateParts[0]);
+  const month = Number(dateParts[1]);
+  const day = Number(dateParts[2]);
+
+  // 3. Instantiate at exact midnight to lock the calendar box from slipping backwards
+  const stableDate = new Date(year, month - 1, day);
+  nextSessionDateDisplay = stableDate.toLocaleDateString([], { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+}
+
+// 4. Time display logic handles your local device clock parsing dynamically
+const cleanTimestamp = nextSession?.session_timestamp 
+  ? nextSession.session_timestamp.replace(' ', 'T') 
+  : '';
+
+const nextSessionTimeDisplay = nextSession && cleanTimestamp
+  ? new Date(cleanTimestamp).toLocaleTimeString([], { 
       hour: 'numeric', 
       minute: '2-digit' 
     }) 
   : '--:--';
 
-const nextSessionDateDisplay = nextSession 
-  ? new Date(nextSession.session_timestamp.replace(' ', 'T')).toLocaleDateString([], { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    }) 
-  : '';
 
 
 
