@@ -24,10 +24,10 @@ export default function HomeScreen(): React.JSX.Element {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
 
-  const fetchUserAppointments = async (userId: string, showLoading = false) => {
+ const fetchUserAppointments = async (userId: string, showLoading = false) => {
   if (showLoading) setLoading(true);
   try {
-    // 💡 INDUSTRY STANDARD: Set boundary to midnight today local time
+    // 💡 FIX: Calculate midnight today in local time, then convert to ISO
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
@@ -35,7 +35,7 @@ export default function HomeScreen(): React.JSX.Element {
       .from('appointments')
       .select('id, session_timestamp, is_booked, price')
       .eq('user_id', userId)
-      // 💡 Pulls everything from midnight today onward so tonight's slots show up
+      // 💡 This ensures any slot happening today or later is captured
       .gte('session_timestamp', startOfToday.toISOString())
       .order('session_timestamp', { ascending: true });
 
@@ -107,42 +107,6 @@ export default function HomeScreen(): React.JSX.Element {
     );
   }
 
-  // --- PLACE ALL THIS EXACTLY ABOVE YOUR MAIN RETURN ( BLOCK ---
-  
-  // 1. Calculate the active upcoming totals
-  const totalActiveSessionsCount = upcomingSessions.length;
-  const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
-
-  // 2. Extract the raw date string component cleanly
-  const rawDateString = nextSession?.session_timestamp 
-    ? nextSession.session_timestamp.split(/[ T]/)[0] 
-    : '';
-
-  let nextSessionDateDisplay = '';
-  if (rawDateString) {
-    const dateParts = rawDateString.split('-');
-    const year = Number(dateParts[0]);
-    const month = Number(dateParts[1]);
-    const day = Number(dateParts[2]);
-
-    // Create date at local midnight to lock the calendar day from slipping backwards
-    const stableDate = new Date(year, month - 1, day);
-    nextSessionDateDisplay = stableDate.toLocaleDateString([], { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  }
-
-  // 3. Parse your local device time window dynamically
-  const cleanTimestamp = nextSession?.session_timestamp 
-    ? nextSession.session_timestamp.replace(' ', 'T') 
-    : '';
-
-  const nextSessionTimeDisplay = nextSession && cleanTimestamp
-    ? new Date(cleanTimestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) 
-    : '--:--';
-
   if (!isMounted || loading) {
     return <></>;
   }
@@ -177,6 +141,40 @@ export default function HomeScreen(): React.JSX.Element {
       console.error('Cancellation failed:', error);
     }
   };
+
+// --- PLACE THIS EXACTLY ABOVE YOUR MAIN RETURN ( BLOCK ---
+const totalActiveSessionsCount = upcomingSessions.length;
+const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
+
+// 1. Grab the raw date part safely by accessing index 0 of the split array
+const rawDateString = nextSession?.session_timestamp 
+  ? nextSession.session_timestamp.split(/[ T]/)[0] 
+  : '';
+
+let nextSessionDateDisplay = '';
+if (rawDateString) {
+  const dateParts = rawDateString.split('-');
+  const year = Number(dateParts[0]);
+  const month = Number(dateParts[1]);
+  const day = Number(dateParts[2]);
+
+  // Create date at local midnight to lock the calendar box from rolling back
+  const stableDate = new Date(year, month - 1, day);
+  nextSessionDateDisplay = stableDate.toLocaleDateString([], { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+}
+
+const cleanTimestamp = nextSession?.session_timestamp 
+  ? nextSession.session_timestamp.replace(' ', 'T') 
+  : '';
+
+const nextSessionTimeDisplay = nextSession && cleanTimestamp
+  ? new Date(cleanTimestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) 
+  : '--:--';
+
 
   // 7. UI COMPONENT LAYOUT GENERATION
   return (
