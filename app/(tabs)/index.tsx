@@ -264,24 +264,23 @@ const nextSessionDateDisplay = nextSession
                 data={upcomingSessions.slice(1)} 
                 scrollEnabled={false} 
                 keyExtractor={(item) => item.id} 
-                renderItem={({ item }: { item: Appointment }) => {
-                  const utcString = item.session_timestamp.endsWith('Z')
-  ? item.session_timestamp
-  : `${item.session_timestamp}Z`;
-
-                  const rowDate = new Date(utcString).toLocaleDateString([], { month: 'short', day: 'numeric' });
-                  const rowTime = new Date(utcString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                  
-                  return (
-                    <View style={styles.timelineRowCard}>
-                      <View style={styles.timelineLeftBlock}>
-                        <View style={styles.timelineNodeDot} />
-                        <Text style={styles.timelineDateText}>{rowDate}</Text>
-                      </View>
-                      <Text style={styles.timelineTimeText}>{rowTime}</Text>
-                    </View>
-                  );
-                }} 
+               renderItem={({ item }: { item: Appointment }) => {
+  // 💡 FIX: Replace spaces with a T token for absolute local timezone parsing
+  const cleanIsoString = item.session_timestamp.replace(' ', 'T');
+  
+  const rowDate = new Date(cleanIsoString).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const rowTime = new Date(cleanIsoString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  
+  return (
+    <View style={styles.timelineRowCard}>
+      <View style={styles.timelineLeftBlock}>
+        <View style={styles.timelineNodeDot} />
+        <Text style={styles.timelineDateText}>{rowDate}</Text>
+      </View>
+      <Text style={styles.timelineTimeText}>{rowTime}</Text>
+    </View>
+  );
+}}
               />
             </View>
           )}
