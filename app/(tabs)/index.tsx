@@ -148,40 +148,26 @@ const fetchUserAppointments = async (userId: string, showLoading = false) => {
     }
   };
 
-// 💡 Correctly grabs the single closest upcoming appointment row from your filtered data
-const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
+// 💡 INDUSTRY STANDARD: No splitting, no character replacing.
 const totalActiveSessionsCount = upcomingSessions.length;
+const nextSession: Appointment | null = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
 
-
-// 1. Grab the raw date part safely by accessing index 0 of the split array
-const rawDateString = nextSession?.session_timestamp 
-  ? nextSession.session_timestamp.split(/[ T]/)[0] 
-  : '';
-
-let nextSessionDateDisplay = '';
-if (rawDateString) {
-  const dateParts = rawDateString.split('-');
-  const year = Number(dateParts[0]);
-  const month = Number(dateParts[1]);
-  const day = Number(dateParts[2]);
-
-  // Create date at local midnight to lock the calendar box from rolling back
-  const stableDate = new Date(year, month - 1, day);
-  nextSessionDateDisplay = stableDate.toLocaleDateString([], { 
-    month: 'short', 
-    day: 'numeric', 
-    year: 'numeric' 
-  });
-}
-
-const cleanTimestamp = nextSession?.session_timestamp 
-  ? nextSession.session_timestamp.replace(' ', 'T') 
-  : '';
-
-const nextSessionTimeDisplay = nextSession && cleanTimestamp
-  ? new Date(cleanTimestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) 
+// The native Date engine automatically parses standard ISO strings into the user's phone timezone
+const nextSessionTimeDisplay = nextSession 
+  ? new Date(nextSession.session_timestamp).toLocaleTimeString([], { 
+      hour: 'numeric', 
+      minute: '2-digit' 
+    }) 
   : '--:--';
 
+const nextSessionDateDisplay = nextSession 
+  ? new Date(nextSession.session_timestamp).toLocaleDateString([], { 
+      weekday: 'short',
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }) 
+  : '';
 
   // 7. UI COMPONENT LAYOUT GENERATION
   return (
@@ -284,16 +270,11 @@ const nextSessionTimeDisplay = nextSession && cleanTimestamp
                 data={upcomingSessions.slice(1)} 
                 scrollEnabled={false} 
                 keyExtractor={(item) => item.id} 
-            renderItem={({ item }: { item: Appointment }) => {
-  const rawDatePart = item.session_timestamp.split(/[ T]/)[0];
-  const [year, month, day] = rawDatePart.split('-');
-  const stableDate = new Date(Number(year), Number(month) - 1, Number(day));
+         renderItem={({ item }: { item: Appointment }) => {
+  // 💡 Native conversion directly from the database string
+  const rowDate = new Date(item.session_timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const rowTime = new Date(item.session_timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   
-  const rowDate = stableDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  
-  const cleanIsoString = item.session_timestamp.replace(' ', 'T');
-  const rowTime = new Date(cleanIsoString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-
   return (
     <View style={styles.timelineRowCard}>
       <View style={styles.timelineLeftBlock}>
